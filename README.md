@@ -1,8 +1,6 @@
 <div align="center">
 
-<img src="docs/screenshots/three.jpg" alt="苏哇工作台 · OpenBox3D — PBR 3D 折叠预览" width="720">
-
-# OpenBox3D · 苏哇工作台
+# 设计 · OpenBox3D
 
 **Browser-based packaging design workbench — parametric dielines, layered artwork design with print finishes, PBR 3D folding preview, and press-ready PDF export.**
 
@@ -28,26 +26,13 @@
 
 > This is the open-source edition of the Box3D workbench. It intentionally ships **without** AI image generation, AR/iOS preview, DXF export and the experimental material/environment lab.
 
-## Screenshots
-
-<div align="center">
-<img src="docs/screenshots/structure.jpg" alt="结构工作区 — 参数化刀版" width="700">
-<br><sub>结构 Structure — parametric dieline with thickness compensation, bleed/safe guides and validation</sub>
-<br><br>
-<img src="docs/screenshots/design.jpg" alt="设计工作区 — 分层展开图" width="700">
-<br><sub>设计 Design — layered artwork on the unfolded sheet, with foil / spot-UV / gloss / emboss channels</sub>
-<br><br>
-<img src="docs/screenshots/three.jpg" alt="3D 折叠预览" width="700">
-<br><sub>3D — real-time PBR folding preview with studio scenes and inspection modes</sub>
-</div>
-
 ## Quick Start
 
-Requirements: **Node.js ≥ 18** and npm. No install? Try the **[live demo](https://yuyou-dev.github.io/OpenBox3D/)** first — the whole app is static and runs entirely in your browser.
+Requirements: **Node.js ≥ 18** and npm. The whole app is static and runs entirely in your browser.
 
 ```bash
-git clone https://github.com/yuyou-dev/OpenBox3D.git
-cd OpenBox3D
+git clone https://github.com/liulixiao58/design.git
+cd design
 npm install
 npm run dev
 ```
@@ -59,7 +44,7 @@ Production build:
 ```bash
 npm run build        # includes a template/UV consistency check (prebuild)
 npm run preview      # serve the built bundle at the same address
-npm run build:pages  # build with base=/OpenBox3D/ for GitHub Pages subpath hosting
+npm run build:pages  # build for GitHub Pages subpath hosting
 ```
 
 Note: the dev server binds to `127.0.0.1` only (not reachable from LAN) — this is a deliberate security baseline.
@@ -87,13 +72,13 @@ The top bar switches between four workspaces:
 
 ### Customising the built-in sample box
 
-The first-launch sample box is a standard `.boxproj` bundled at [`src/preset/preset-box.json`](src/preset/preset-box.json) (with its layer images under `public/preset/`). To replace it with your own: design a box in the workbench, use **导出工程** to save the `.boxproj`, then run:
+The first-launch sample box is a generic `.boxproj` bundled at [`src/preset/preset-box.json`](src/preset/preset-box.json). To replace it with your own private preset, design a box in the workbench, use **导出工程** to save the `.boxproj`, then run:
 
 ```bash
 npm run preset:from -- /path/to/your-project.boxproj
 ```
 
-The script extracts layer images into `public/preset/` and rewrites the bundled JSON; rebuild/restart to see it.
+The script rewrites the bundled JSON and extracts any embedded layer images locally; rebuild/restart to see it. Customer presets are intentionally excluded from this repository.
 
 ## Tech stack
 
@@ -139,8 +124,8 @@ Handy during development: `?view=structure|design|three|output`, `?tpl=rte|ste|m
 
 **OpenBox3D（苏哇工作台）** 是一个纯浏览器的包装盒设计工作台：参数化刀版（纸厚补偿、出血/安全区）→ 分层平面设计（烫金/烫银/局部 UV/亮面/压纹/镭射幻彩工艺通道）→ three.js PBR 3D 折叠预览 → 1:1 CMYK 印刷 PDF 与工艺分版导出。无需后端、无需账号、无需 API Key。
 
-- **安装运行**：Node.js ≥ 18，`npm install && npm run dev`，打开 <http://127.0.0.1:26847>，首屏即内置示例盒（3D 闭合态），直接开始 DIY。也可直接体验 **[在线 Demo](https://yuyou-dev.github.io/OpenBox3D/)**（纯前端静态托管，GitHub Actions 自动部署）。
+- **安装运行**：Node.js ≥ 18，`npm install && npm run dev`，打开 <http://127.0.0.1:26847>，首屏即内置通用示例盒，直接开始 DIY。
 - **工程文件**：顶栏「导出工程 / 导入工程」保存与分享 `.boxproj` 本地文件；「重置示例盒」恢复初始状态。
-- **替换示例盒**：在工作台设计好盒子 → 顶栏「导出工程」→ `npm run preset:from -- /路径/工程.boxproj`（图片抽取到 `public/preset/`，工程写入 `src/preset/preset-box.json`）。
+- **替换示例盒**：在工作台设计好盒子 → 顶栏「导出工程」→ `npm run preset:from -- /路径/工程.boxproj`（工程写入 `src/preset/preset-box.json`；客户素材不应提交到公共仓库）。
 - **开源边界**：本开源版不含 AI 生图、AR/iOS 预览、DXF 导出与实验性的材质和环境实验室。
 - 开发服务器仅绑定 `127.0.0.1`（局域网不可达），属刻意安全基线。
