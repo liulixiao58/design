@@ -1,0 +1,9 @@
+{
+  "schema": "box3d-project",
+  "version": 1,
+  "meta": { "id": "preset", "name": "空白示例盒", "createdAt": "2026-01-01T00:00:00.000Z", "updatedAt": "2026-01-01T00:00:00.000Z", "thumbnail": "" },
+  "box": { "tpl": "rte", "L": 80, "W": 40, "H": 120, "matId": "sbs350", "bleed": 3, "glue": 14, "ovr": {}, "typeOvr": {} },
+  "design": { "layers": [], "seq": 1 },
+  "appearance": { "material": {}, "fx": { "foil": true, "suv": false, "emb": false, "gloss": true, "holo": false }, "embDir": "up" },
+  "scene": {}
+}

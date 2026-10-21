@@ -1,0 +1,38 @@
+{
+  "name": "openbox3d",
+  "version": "0.1.0",
+  "description": "OpenBox3D 苏哇工作台 — 浏览器内的包装盒设计工作台：参数化刀版、分层设计、PBR 3D 折叠预览与印刷 PDF 导出",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/liulixiao58/design.git"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "prebuild": "npm run check:template-sync",
+    "build": "vite build",
+    "build:pages": "npm run check:template-sync && vite build --base=/design/",
+    "check:template-sync": "node scripts/check-template-sync.mjs",
+    "preset:from": "node scripts/boxproj-to-preset.mjs",
+    "proposal:export": "node scripts/export-proposal.mjs",
+    "test:proposal": "node --test scripts/proposal.test.mjs",
+    "test": "node --test scripts/*.test.mjs",
+    "project:check": "node scripts/project-preflight.mjs",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "fflate": "0.8.3",
+    "image-size": "2.0.4",
+    "pdf-lib": "1.17.1",
+    "pdfkit": "0.20.2",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "svg-to-pdfkit": "0.1.8",
+    "three": "0.184.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^5.4.11"
+  }
+}

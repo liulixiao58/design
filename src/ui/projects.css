@@ -1,0 +1,41 @@
+.projects-view{flex:1;overflow:auto;padding:36px 42px;color:#302a22;background:#f5f1e8}
+.projects-heading{display:flex;align-items:center;justify-content:space-between;gap:24px;max-width:1400px;margin:0 auto}
+.projects-eyebrow{font-size:10px;letter-spacing:.18em;color:#927754;font-weight:700}
+.projects-heading h1{font-size:30px;margin:9px 0;color:#302a22}
+.projects-heading p{color:#766b5c;margin:0;line-height:1.7}
+.projects-actions{display:flex;gap:10px;flex-wrap:wrap}
+.projects-view button{border:1px solid #d6cbbb;border-radius:6px;padding:9px 14px;background:#fffdf8;color:#514534;font:inherit;cursor:pointer}
+.projects-view button:hover:not(:disabled){border-color:#9a5b1f;background:#f2e7d6}
+.projects-view button:focus-visible{outline:2px solid #9a5b1f;outline-offset:3px}
+.projects-view button:disabled{opacity:.55;cursor:default}
+.projects-view button.primary{background:#9a5b1f;border-color:#9a5b1f;color:white}
+.projects-toolbar{max-width:1400px;margin:0 auto 20px;display:flex;justify-content:space-between;gap:16px}
+.projects-toolbar>div{display:flex;gap:8px}
+.projects-toolbar button[aria-pressed=true]{background:#e8dcc8;border-color:#ba9c73;font-weight:700}
+.projects-grid{max-width:1400px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:22px}
+.project-card{background:#fffcf6;border:1px solid #ded4c3;border-radius:12px;overflow:hidden}
+.project-card.current{border-color:#a36f35;box-shadow:0 0 0 1px #a36f35}
+.projects-view .project-cover{display:block;position:relative;width:100%;height:200px;border:0;border-radius:0;padding:0;background:#eae3d7;overflow:hidden}
+.project-cover img{width:100%;height:100%;object-fit:contain}
+.project-placeholder{height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:9px;color:#776349;background:linear-gradient(145deg,#f3ede2,#e5d8c1)}
+.project-placeholder>span{font-size:60px;line-height:1;color:#9a7c51;transform:rotate(-12deg)}
+.project-badge{position:absolute;left:12px;top:12px;background:#fff9ed;color:#805321;padding:5px 9px;border-radius:4px;font-size:11px}
+.project-info{padding:18px 18px 14px}
+.project-info h2{font-size:17px;line-height:1.5;margin:0 0 7px;overflow-wrap:anywhere}
+.project-info p{margin:0 0 8px;color:#796d5e;font-size:12px}
+.project-info small{font-size:11px;color:#8e8171}
+.project-buttons{padding:0 18px 18px;display:flex;gap:7px;flex-wrap:wrap}
+.project-buttons button{font-size:12px;padding:8px 11px}
+.project-buttons .danger{color:#975746}
+.project-documents{margin:0 18px 16px;color:#80613b;font-size:12px}.project-documents summary{cursor:pointer;padding:5px 0}.project-documents a{display:block;line-height:1.6;margin:7px 0;color:#805321;overflow-wrap:anywhere}
+.projects-empty{max-width:1400px;box-sizing:border-box;margin:0 auto;background:#faf7f0;border:1px dashed #d2c3ab;border-radius:12px;text-align:center;padding:50px 20px;color:#817361}
+.projects-empty>div{font-size:54px;color:#ab8c5f}
+.projects-empty h2{font-size:20px;color:#534736}
+.projects-empty p{line-height:1.8}
+.projects-storage{max-width:1400px;margin:26px auto 0;color:#8a7c69;font-size:12px;line-height:1.8}
+@media(max-width:760px){.projects-view{padding:24px 18px}.projects-heading{align-items:flex-start;flex-direction:column}.projects-grid{grid-template-columns:1fr}}
+.project-dialog-backdrop{position:fixed;inset:0;z-index:100;background:#211d1877;display:flex;align-items:center;justify-content:center;padding:20px}
+.project-dialog{width:420px;max-width:100%;padding:26px;border:1px solid #d6cbbb;border-radius:12px;background:#fffcf6;box-shadow:0 20px 80px #0003;color:#302a22}
+.project-dialog h2{margin:0 0 12px;font-size:21px}.project-dialog p{line-height:1.8;color:#766754}
+.project-dialog label{display:block;font-size:12px;color:#766754}.project-dialog input{box-sizing:border-box;width:100%;padding:10px;margin:7px 0 18px;border:1px solid #bfae94;border-radius:5px;font:inherit;background:white}
+.project-dialog>div{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}.project-dialog button{font:inherit;padding:8px 18px;border:1px solid #c7b89e;border-radius:5px;cursor:pointer;background:white;color:#514534}.project-dialog button[type=submit]{background:#9a5b1f;color:white;border-color:#9a5b1f}.project-dialog button:disabled{opacity:.5;cursor:default}

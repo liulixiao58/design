@@ -1,0 +1,44 @@
+import { jsonForHtml, httpUrl } from './schema.js';
+
+const esc = v => String(v ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const text = v => typeof v === 'string' && !!v.trim();
+const image = (src,alt) => /^data:image\/(png|jpeg|webp|svg\+xml);base64,/.test(src||'') ? `<img src="${esc(src)}" alt="${esc(alt)}">` : '';
+
+export function validateCustomer(c) {
+  if(!c||!text(c.title)||!text(c.tagline)||!Array.isArray(c.story)||!c.story.length||!c.story.every(text))throw new Error('请先完成客户方案的标题、设计故事');
+  if(!Array.isArray(c.sections)||c.sections.length!==9||new Set(c.sections.map(s=>s.id)).size!==9||c.sections.some(s=>!text(s.id)||!text(s.title)||!text(s.body)||!Array.isArray(s.visuals)||!s.visuals.length))throw new Error('客户视觉系统须有九个完整子板块');
+  if(c.references!=null&&(!Array.isArray(c.references)||c.references.some(r=>!text(r.title)||!httpUrl(r.url))))throw new Error('客户方案参考链接无效');
+  return c;
+}
+
+// 明确白名单；客户文件不包含设计师研究记录、审核入口和生产检查列表。
+export function customerPayloadOf(p,previews) {
+  validateCustomer(p.customer);
+  if(!previews?.iso)throw new Error('请等待3D取景完成后生成设计方案');
+  const out={audience:'customer',schema:p.schema,version:p.version,id:p.id,title:p.title,revision:p.revision,
+    project:p.project,palette:p.palette,fonts:p.fonts,assets:p.assets,thirdPartyNotices:p.thirdPartyNotices,
+    customer:p.customer,previews};
+  for(const s of out.customer.sections)for(const [i,v]of s.visuals.entries()){
+    if(!['panel','dieline','views','palette','image'].includes(v.kind))throw new Error('客户视觉类型不支持：'+v.kind);
+    if(['panel','dieline'].includes(v.kind)&&!previews[s.id+'-'+i])throw new Error('客户盒面预览未完成：'+s.title);
+    if(v.kind==='image'&&!/^data:image\/(png|jpeg|webp|svg\+xml);base64,/.test(v.src||''))throw new Error('客户图片必须内嵌');
+  }
+  return out;
+}
+
+export const CUSTOMER_CSS = `body.customer-page{background:#f6f3ed;color:#30262b;font-family:system-ui,"Microsoft YaHei",sans-serif;line-height:1.8}.customer-page main{max-width:1380px;padding:38px;margin:auto}.customer-hero{display:grid;grid-template-columns:.85fr 1.2fr;gap:50px;align-items:center;margin:24px 0 65px}.customer-hero h1{font-size:clamp(30px,3.7vw,54px);line-height:1.25;margin:15px 0 26px}.customer-story p{font-size:15px;color:#62545a}.customer-kicker{letter-spacing:.18em;font-size:11px;color:#9b705b}.customer-title{font-size:22px}.customer-viewer{position:relative;min-width:0;height:540px;background:#fff;border-radius:14px;overflow:hidden}.customer-poster{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}.customer-model{position:absolute;inset:0;opacity:0}.customer-model.ready{opacity:1}.customer-engine{height:100%}.customer-engine button{display:none}.customer-spin{position:absolute;right:12px;bottom:12px;background:#fff;border:1px solid #ddd;border-radius:5px;padding:7px 15px;color:#493b40;cursor:pointer}.customer-status{font-size:11px;color:#7c7074;margin:8px}.customer-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:#d9d0cb;border:1px solid #d9d0cb}.customer-tile{background:#fffefa;padding:24px;min-width:0}.customer-tile h3{font-size:16px;color:#493b40;margin:0 0 16px}.customer-tile img{display:block;width:100%;height:235px;object-fit:contain;background:#f5f1eb}.customer-tile p{font-size:13px;color:#74646c}.customer-colors{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:15px}.customer-color{flex:1;min-width:70px}.customer-color i{display:block;height:95px;border:1px solid #eee}.customer-color small{font-size:10px}.customer-triple{display:flex;gap:4px}.customer-triple img{width:calc(100% / 3);height:180px}.customer-refs{font-size:10px;color:#8f7c82}.customer-refs a{margin-right:12px}.customer-foot{font-size:11px;color:#8b7a80;padding-top:28px}.customer-foot details{margin-top:20px}.customer-foot pre{white-space:pre-wrap;font-size:9px}@media(max-width:850px){.customer-page main{padding:22px}.customer-hero{grid-template-columns:1fr;gap:20px;margin-bottom:35px}.customer-viewer{height:420px}.customer-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.customer-tile{padding:16px}}@media(max-width:520px){.customer-grid{grid-template-columns:1fr}.customer-viewer{height:360px}.customer-tile img{height:280px}}`;
+
+const CUSTOMER_LARGE_CSS = `.customer-page main{max-width:1440px}.customer-hero{grid-template-columns:1fr 1.15fr;align-items:start;gap:36px}.customer-hero h1{text-wrap:balance;font-size:clamp(30px,3.3vw,48px)}.customer-story p{font-size:16px;line-height:1.95}.customer-viewer{height:640px}.customer-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.customer-tile{padding:30px}.customer-tile img{height:380px}.customer-tile p{font-size:15px;line-height:1.95}.customer-tile figure{margin:0}.customer-tile figcaption{font-size:12px;color:#786b61;margin:8px 0 16px}.customer-tile[data-theme="information"]{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}.customer-tile[data-theme="information"] h3,.customer-tile[data-theme="information"]>p{grid-column:1/-1}.customer-tile[data-theme="information"] img{height:300px}.customer-tile[data-theme="context"],.customer-tile[data-theme="views"],.customer-tile[data-theme="information"]{grid-column:1/-1}.customer-tile[data-theme="context"] img{height:auto;max-height:720px}.customer-triple img{height:340px}.customer-refs{font-size:12px}.customer-foot{font-size:13px}.customer-reset{position:absolute;left:12px;bottom:12px;background:#fff;border:1px solid #ddd;border-radius:5px;padding:7px 15px;color:#493b40;cursor:pointer}@media(max-width:850px){.customer-hero{grid-template-columns:1fr}.customer-viewer{height:460px}.customer-tile{padding:22px}}@media(max-width:600px){.customer-tile[data-theme="information"]{grid-template-columns:1fr}.customer-grid{grid-template-columns:1fr}.customer-tile img{height:auto;max-height:520px}.customer-triple{flex-direction:column}.customer-triple img{width:100%;height:300px}.customer-viewer{height:380px}}`;
+
+export function customerMarkup(p) {
+  const c=validateCustomer(p.customer),shots=p.previews||{};
+  const visual=(v,s,i)=>v.kind==='palette'?'<div class="customer-colors">'+p.palette.map(a=>'<div class="customer-color"><i style="background:'+(/^#[\da-f]{6}$/i.test(a.value)?a.value:'#eee')+'"></i><small>'+esc(a.name)+'</small></div>').join('')+'</div>':v.kind==='views'?'<div class="customer-triple">'+['front','side','iso'].map(k=>image(shots[k],k+'工程视图')).join('')+'</div>':image(v.kind==='image'?v.src:shots[s.id+'-'+i],v.caption||s.title);
+  return `<main><div class="customer-hero"><section class="customer-story"><span class="customer-kicker">PACKAGING VISUAL SYSTEM</span><h2 class="customer-title">${esc(c.title)}</h2><h1>${esc(c.tagline)}</h1>${c.story.map(s=>'<p>'+esc(s)+'</p>').join('')}<div class="customer-refs">${(c.references||[]).map(r=>'<a href="'+esc(r.url)+'" target="_blank" rel="noreferrer">'+esc(r.title)+'</a>').join('')}</div></section><section><div class="customer-viewer">${image(shots.iso,'包装静态效果图').replace('<img ','<img class="customer-poster" ')}<div id="customer-model" class="customer-model"></div></div><p id="customer-status" class="customer-status">静态方案可直接阅读；支持交互的浏览器将启用旋转3D。</p></section></div><h2>完整视觉系统</h2><div class="customer-grid">${c.sections.map((s,n)=>'<section class="customer-tile" data-theme="'+esc(s.id)+'"><h3>'+String(n+1).padStart(2,'0')+' / '+esc(s.title)+'</h3>'+s.visuals.map((v,i)=>'<figure>'+visual(v,s,i)+'<figcaption>'+esc(v.caption||s.title)+'</figcaption></figure>').join('')+'<p>'+esc(s.body)+'</p></section>').join('')}</div><footer class="customer-foot">${esc(c.notice||'视觉概念，结构、产品信息及实际工艺以打样确认。')}<details><summary>组件与字体许可</summary><pre>${esc(p.thirdPartyNotices)}</pre></details></footer></main>`;
+}
+
+export function customerDocument(source,p,previews) {
+  const payload=customerPayloadOf(p,previews);
+  const runtime=source.match(/<script>([\s\S]*)<\/script>/i)?.[1];
+  if(!runtime)throw new Error('离线运行代码缺失，请重新导出设计师报告');
+  return `<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; connect-src data: blob:; base-uri 'none'; form-action 'none'"><title>${esc(payload.customer.title)} · 客户设计方案</title><style>${CUSTOMER_CSS}${CUSTOMER_LARGE_CSS}</style></head><body class="customer-page">${customerMarkup(payload)}<script id="proposal-data" type="application/json">${jsonForHtml(payload)}</script><script>${runtime}</script></body></html>`;
+}
