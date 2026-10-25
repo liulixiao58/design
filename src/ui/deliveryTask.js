@@ -1,4 +1,5 @@
 import { productionIssues } from '../design/productionCheck.js';
+import { productionReleaseIssues } from '../design/acceptance.js';
 
 export function createDeliveryTask(exportFile) {
   let busy = false;
@@ -9,7 +10,7 @@ export function createDeliveryTask(exportFile) {
       busy = true;
       try {
         if (mode !== 'rgb') {
-          const issues = productionIssues(state.layers, { loaded: true, reconstruction: state.reconstruction });
+          const issues = productionIssues(state.layers, { loaded: true, reconstruction: state.reconstruction }).concat(mode === 'proof' ? [] : productionReleaseIssues(state));
           if (issues.length) throw new Error('生产导出被阻止：' + issues.join('；'));
         }
         return await exportFile(state, material, mode);

@@ -12,12 +12,12 @@ export const jsonForHtml = value => JSON.stringify(value).replace(/</g, '\\u003c
 
 export function validateProject(doc) {
   check(doc?.schema === 'box3d-project' && doc.version === 1 && text(doc.meta?.name), '工程格式或名称无效');
-  if(doc.meta.reconstruction){const r=doc.meta.reconstruction;check(r.scope==='lid-only'&&r.dimensionStatus==='estimated'&&text(r.notice)&&Array.isArray(r.lidFaceMm)&&r.lidFaceMm.length===2&&r.lidFaceMm.every(v=>finite(v)&&v>0&&v<=602),'反推参考工程标记无效');}
+  if(doc.meta.reconstruction){const r=doc.meta.reconstruction;check(r.scope==='lid-only'&&r.dimensionStatus==='estimated'&&text(r.notice)&&Array.isArray(r.lidFaceMm)&&r.lidFaceMm.length===2&&r.lidFaceMm.every(v=>finite(v)&&v>0&&v<=1002),'反推参考工程标记无效');}
   const box = doc.box;
   check(box && TPLS.some(t => t.id === box.tpl), '工程盒型无效');
   const mat = MATS.find(m => m.id === box.matId);
   check(mat, '工程纸材无效');
-  for (const key of ['L', 'W', 'H']) check(finite(box[key]) && box[key] > 0 && box[key] <= 600, '盒内尺寸须在 0～600 mm 内：' + key);
+  for (const key of ['L', 'W', 'H']) check(finite(box[key]) && box[key] > 0 && box[key] <= 1000, '盒内尺寸须在 0～1000 mm 内：' + key);
   check(finite(box.bleed) && box.bleed >= 0 && box.bleed <= 20 && finite(box.glue) && box.glue > 0 && box.glue <= 100, '出血或糊口无效');
   for (const key of ['ovr', 'typeOvr']) check(box[key] && typeof box[key] === 'object' && !Array.isArray(box[key]), '刀版覆盖数据无效');
   check(Object.keys(box.ovr).length === 0 && Object.keys(box.typeOvr).length === 0, '提案桥第一版仅支持参数化刀版，请先移除手动节点/线型覆盖，避免 2D 与 3D 不一致');

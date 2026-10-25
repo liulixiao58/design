@@ -49,6 +49,7 @@ export class BoxEngine {
       else if (fv <= 0.5) this.frame();
     }
     if (prev.fitFold === '1' && p.fitFold !== '1' && this.num('fold', 0) < 99.5) this._fitGoal = null;
+    if (prev.displayPose !== p.displayPose) { this.applyFold(); this.frame(); }
     if (prev.film !== p.film || FILM_CONTROL_KEYS.some(k => prev[k] !== p[k])) this.updateFilm();
     if (prev.foilRoughness !== p.foilRoughness) this.updateFoilRoughness();
     if (prev.check !== p.check || prev.embOn !== p.embOn || prev.embBoost !== p.embBoost || prev.embDepth !== p.embDepth || prev.film !== p.film || MATERIAL_CONTROL_KEYS.some(k => prev[k] !== p[k])) this.applyFlags();
@@ -93,12 +94,11 @@ export class BoxEngine {
     r.domElement.addEventListener('dblclick', () => this.frame());
     // 视角按钮
     const tb = document.createElement('div');
-    tb.style.cssText = 'position:absolute;bottom:10px;right:10px;display:flex;gap:4px;z-index:2';
+    tb.className = 'box-preview-toolbar';
+    tb.style.cssText = 'position:absolute;bottom:10px;right:10px;display:flex;gap:4px;padding:4px;z-index:2;background:var(--ui-canvas,#ffffff);border:1px solid var(--ui-border,#dededb);border-radius:6px';
     const mkBtn = (label, fn) => {
       const b = document.createElement('button'); b.textContent = label;
-      b.style.cssText = 'background:rgba(250,247,240,.92);border:1px solid #ded5c4;border-radius:5px;font:12px "Noto Sans SC",sans-serif;color:#5c554a;padding:4px 9px;cursor:pointer;white-space:nowrap';
-      b.onmouseenter = () => b.style.background = '#f0e8d8';
-      b.onmouseleave = () => b.style.background = 'rgba(250,247,240,.92)';
+      b.style.cssText = 'background:transparent;border:0;border-radius:5px;min-height:32px;font:12px "Noto Sans SC",sans-serif;color:var(--ui-secondary,#61615d);padding:6px 10px;cursor:pointer;white-space:nowrap';
       b.onclick = fn; tb.appendChild(b);
     };
     mkBtn('正视', () => this.setView('front')); mkBtn('侧视', () => this.setView('side'));
@@ -107,17 +107,18 @@ export class BoxEngine {
     this.el.appendChild(tb);
     // C4D 式拖拽模式：旋转 / 平移 / 移动盒子 / 转盒
     const mb = document.createElement('div');
-    mb.style.cssText = 'position:absolute;top:10px;left:10px;display:flex;align-items:center;z-index:2;border:1px solid #ded5c4;border-radius:6px;overflow:hidden;background:rgba(250,247,240,.92)';
+    mb.className = 'box-preview-toolbar';
+    mb.style.cssText = 'position:absolute;top:10px;left:10px;display:flex;align-items:center;gap:4px;padding:4px;z-index:2;border:1px solid var(--ui-border,#dededb);border-radius:6px;background:var(--ui-canvas,#ffffff)';
     this._modeBtns = {};
     [['rotate', '○ 旋转'], ['pan', '✚ 平移'], ['move', '▣ 移动盒子'], ['turn', '⟳ 转盒']].forEach(pair => {
       const b = document.createElement('button'); b.textContent = pair[1];
-      b.style.cssText = 'border:none;font:12px "Noto Sans SC",sans-serif;padding:5px 11px;cursor:pointer;white-space:nowrap;background:transparent;color:#5c554a';
+      b.style.cssText = 'border:0;border-radius:5px;min-height:32px;font:12px "Noto Sans SC",sans-serif;padding:6px 10px;cursor:pointer;white-space:nowrap;background:transparent;color:var(--ui-secondary,#61615d)';
       b.onclick = () => this.setMode(pair[0]);
       this._modeBtns[pair[0]] = b; mb.appendChild(b);
     });
     // 回正：转盒后一键归零 boxRoot 旋转；自动旋转（spin）时 rotation.y 被持续驱动，回正无意义故禁用
     const rb = document.createElement('button'); rb.textContent = '回正'; rb.title = '盒子旋转归零（转盒模式后用）';
-    rb.style.cssText = 'border:none;border-left:1px solid #ded5c4;font:12px "Noto Sans SC",sans-serif;padding:5px 10px;cursor:pointer;white-space:nowrap;background:transparent;color:#5c554a';
+    rb.style.cssText = 'border:0;border-left:1px solid var(--ui-border,#dededb);border-radius:5px;min-height:32px;font:12px "Noto Sans SC",sans-serif;padding:6px 10px;cursor:pointer;white-space:nowrap;background:transparent;color:var(--ui-secondary,#61615d)';
     rb.onclick = () => { if (this.props.spin === '1') return; this.resetTurn(); };
     this._turnResetBtn = rb; mb.appendChild(rb);
     this.el.appendChild(mb);
@@ -404,7 +405,24 @@ export class BoxEngine {
     if (this.faceMat) this.faceMat.needsUpdate = true;
     if (this.coreMat) this.coreMat.needsUpdate = true;
   }
-  applyFold() { if (this.folder) { this.folder._dims = this._dims; this.folder.applyFold(this.pieces, this.num('fold', 0)); } }
+  applyFold() {
+    if (this.folder) { this.folder._dims = this._dims; this.folder.applyFold(this.pieces, this.num('fold', 0)); }
+    if (this.props.displayPose === 'upright' || this._displayPose === 'upright') this.applyDisplayPose();
+  }
+  applyDisplayPose() {
+    const root=this.boxRoot;if(!root)return;
+    const pose=this.props.detailPanel?'flat':this.props.displayPose==='upright'?'upright':'flat';
+    if(this._poseRoot!==root||this._displayPose!==pose){
+      root.rotation.set(pose==='upright'?Math.PI/2:0,0,0,'YXZ');
+      this._poseRoot=root;this._displayPose=pose;
+    }
+    // 整盒立起后重新落地；不改变局部刀版、贴图或折叠几何。
+    if(pose==='upright'||this._groundedPose){
+      root.position.y=0;root.updateWorldMatrix(true,true);
+      root.position.y=-new this.T.Box3().setFromObject(root).min.y;
+    }
+    this._groundedPose=pose==='upright';
+  }
 
   applyStudioControls() {
     if (!this.studio) return;
@@ -451,8 +469,9 @@ export class BoxEngine {
     this.renderer.domElement.style.cursor = m === 'move' || m === 'turn' ? 'grab' : m === 'pan' ? 'all-scroll' : 'default';
     Object.entries(this._modeBtns).forEach(pair => {
       const on = pair[0] === m;
-      pair[1].style.background = on ? '#9a5b1f' : 'transparent';
-      pair[1].style.color = on ? '#fff' : '#5c554a';
+      pair[1].setAttribute('aria-pressed', String(on));
+      pair[1].style.background = on ? 'var(--ui-selected,#f0edfc)' : 'transparent';
+      pair[1].style.color = on ? 'var(--ui-accent,#5645d4)' : 'var(--ui-secondary,#61615d)';
       pair[1].style.fontWeight = on ? '700' : '400';
     });
   }
@@ -468,7 +487,8 @@ export class BoxEngine {
     this.boxRoot.updateWorldMatrix(true, false);
     const center = this._centerL || new this.T.Vector3();
     const before = this.boxRoot.localToWorld(center.clone());
-    this.boxRoot.rotation.set(0, 0, 0);
+    const upright=this.props?.displayPose==='upright'&&!this.props?.detailPanel;
+    this.boxRoot.rotation.set(upright?Math.PI/2:0,0,0,'YXZ');
     this.boxRoot.updateWorldMatrix(true, false);
     this.boxRoot.position.add(before.sub(this.boxRoot.localToWorld(center.clone())));
     this.boxRoot.updateWorldMatrix(true, true);
@@ -499,6 +519,9 @@ export class BoxEngine {
     const camera = lowTopHero
       ? new T.Vector3(fitR * 0.9, fitR * 0.54, fitR * 0.9)
       : new T.Vector3(rr * 0.95 * FIT * (tubeHero ? -1 : 1), rr * (topHero ? 1.05 : 0.7) * FIT, rr * 0.95 * FIT * (tubeHero ? -1 : 1));
+    this.controls.maxDistance=Math.max(5000,camera.length()*2);
+    this.camera.far=Math.max(9000,camera.length()+sz.length()*4);
+    this.camera.updateProjectionMatrix();
     const target = this.props.detailPanel ? new T.Vector3(0, c.y, 0) : new T.Vector3(0, Math.max(sz.y * (lowTopHero ? 0.3 : 0.4), lowTopHero ? 10 : 15), 0);
     const orthoHeight = this.camera.isOrthographicCamera
       ? Math.max(60, 2 * camera.distanceTo(target) * Math.tan(T.MathUtils.degToRad(clamp(this.num('fov', 35), 16, 46)) / 2))

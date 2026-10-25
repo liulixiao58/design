@@ -1,5 +1,6 @@
 // 盒型库与参数化刀版生成 —— 移植自原型（genTuck/genMailer/genTray/genSleeve）
 // 纯函数风格：f(params, board) → 线段/填充/标注集合，几何一律以 mm 为基本单位
+import { closureOf, closureOutline } from './closure.js';
 
 export const MATS = [
   { id: 'art200', name: '薄铜版纸 200g', t: 0.22, bleed: 3, note: '轻薄彩盒/裱纸' },
@@ -31,14 +32,14 @@ export function discBbox(N, len) {
 
 // 卷筒盒（圆柱 24 棱 / 六边形 6 棱）：筒身 N 段 + 糊口 + 两个正 N 边形盖
 export function genTube(c, s, t, N, wSeg) {
-  const bh = s.H + t, bodyW = N * wSeg, g = 12;
+  const bh = s.H + t, bodyW = N * wSeg, g = closureOf(s,t).glue;
   const { a, Rp, h } = discBbox(N, wSeg);
   const heroSpan = N === 24 ? 6 : 1, heroIndex = N === 24 ? Math.floor((N - heroSpan) / 2) : Math.floor(N / 2), body = c.rect(0, 0, bodyW, bh);
   c.fill(body);
   if (N === 24) c.region(body, { panelId: 'tube-body', role: 'hero', surface: 'outside', up: 'top', heroRegion: [heroIndex / N, 0, heroSpan / N, 1], heroBox: [heroIndex * wSeg, 0, (heroIndex + heroSpan) * wSeg, bh] });
   else for (let i = 0; i < N; i++) c.region(c.rect(i * wSeg, 0, wSeg, bh), { panelId: i === heroIndex ? 'tube-body' : `tube-face-${i}`, role: i === heroIndex ? 'hero' : 'design', surface: 'outside', up: 'top', ...(i === heroIndex ? { heroRegion: [heroIndex / N, 0, 1 / N, 1], heroBox: [heroIndex * wSeg, 0, (heroIndex + 1) * wSeg, bh] } : {}) });
   c.label(bodyW / 2, bh / 2, '筒身'); c.safeR(0, 0, bodyW, bh);
-  const gp = [[0, 0], [-g, 4], [-g, bh - 4], [0, bh]];
+  const gp = closureOutline('glue',bh,g,t).map(([x,y])=>[-y,x]);
   c.fill(gp); c.cut(gp); c.label(-g / 2, bh / 2, '糊口', 2.8);
   c.crease([[0, 0], [0, bh]]);
   for (let k = 1; k < N; k++) c.crease([[k * wSeg, 0], [k * wSeg, bh]]);
@@ -61,27 +62,27 @@ export function genTube(c, s, t, N, wSeg) {
 
 // 直插/反插盒：横向四板 + 糊口 + 两端插舌/防尘翼
 export function genTuck(c, s, t, reverse) {
-  const L = s.L, W = s.W, H = s.H, glue = s.glue, bh = H + t;
+  const L = s.L, W = s.W, H = s.H, {glue,tuck:tk,dust:dh} = closureOf(s,t), bh = H + t;
   const cols = [W + t, L + t, W + t, L + 2 * t];
   const xs = [0]; cols.forEach(w => xs.push(xs[xs.length - 1] + w));
   const names = ['侧面', '正面', '侧面', '背面'], panelIds = ['side-left', 'front', 'side-right', 'back'];
   for (let i = 0; i < 4; i++) { const pts = c.rect(xs[i], 0, cols[i], bh); c.fill(pts); c.region(pts, { panelId: panelIds[i], role: i === 1 ? 'hero' : 'design', surface: 'outside', up: 'top' }); c.label(xs[i] + cols[i] / 2, bh / 2, names[i]); c.safeR(xs[i], 0, cols[i], bh); }
-  const gp = [[0, 0], [-glue, 5], [-glue, bh - 5], [0, bh]];
+  const gp = closureOutline('glue',bh,glue,t).map(([x,y])=>[-y,x]);
   c.fill(gp); c.cut(gp); c.label(-glue / 2, bh / 2, '糊口', 2.8);
   c.crease([[0, 0], [0, bh]]);
   for (let i = 1; i < 4; i++) c.crease([[xs[i], 0], [xs[i], bh]]);
   c.cut([[xs[4], 0], [xs[4], bh]]);
-  const lidH = W + t, tk = Math.min(16, W * 0.55), dh = Math.min(W * 0.75, 32);
+  const lidH = W + t;
   // 盖的挂接列：rte 顶盖挂背面、底盖挂正面（2026-08-12 对调，与 box3d-app 同步）；ste 两盖仍同挂正面
   const ends = [{ yb: 0, sgn: -1, lid: reverse ? 3 : 1, panelId: 'top' }, { yb: bh, sgn: 1, lid: 1, panelId: 'bottom' }];
   for (const e of ends) for (let i = 0; i < 4; i++) {
     const x0 = xs[i], x1 = xs[i + 1];
     if (i === e.lid) {
-      flapLid(c, x0, x1, e.yb, e.sgn, lidH, tk);
+      flapLid(c, x0, x1, e.yb, e.sgn, lidH, tk, t);
       const y1 = e.yb + e.sgn * lidH;
       c.region([[x0, e.yb], [x0, y1], [x1, y1], [x1, e.yb]], { panelId: e.panelId, surface: 'outside', up: 'top' });
     }
-    else if (i % 2 === 0) flapDust(c, x0, x1, e.yb, e.sgn, dh);
+    else if (i % 2 === 0) flapDust(c, x0, x1, e.yb, e.sgn, dh, t);
     else c.cut([[x0, e.yb], [x1, e.yb]]);
   }
   const topY = -(lidH + tk) - 7, botY = bh + lidH + tk + 9;
@@ -90,42 +91,35 @@ export function genTuck(c, s, t, reverse) {
   c.dimV(0, bh, xs[4] + 8, '' + c.fmt(bh));
 }
 
-function flapLid(c, x0, x1, yb, sgn, lidH, tk) {
-  const y1 = yb + sgn * lidH, y2 = yb + sgn * (lidH + tk);
-  const a = x0, b = x1, sl = x0 + 5, sr = x1 - 5, r = 3.5; // 盖身侧边取直（2026-08 起方形盖，原 1mm 内收梯形已废）
-  const pts = [[x0, yb], [a, y1], [sl, y1 + sgn * 2.5], [sl, y2 - sgn * r]]
-    .concat(c.q([sl, y2 - sgn * r], [sl, y2], [sl + r, y2], 'tr').slice(1))
-    .concat([[sr - r, y2]])
-    .concat(c.q([sr - r, y2], [sr, y2], [sr, y2 - sgn * r], 'tr').slice(1))
-    .concat([[sr, y1 + sgn * 2.5], [b, y1], [x1, yb]]);
+function flapLid(c, x0, x1, yb, sgn, lidH, tk, t) {
+  const y1 = yb + sgn * lidH;
+  const pts = [[x0,yb],...closureOutline('tuck',x1-x0,tk,t).map(([x,y])=>[x0+x,y1+sgn*y]),[x1,yb]];
   c.cut(pts); c.fill(pts);
-  c.crease([[x0, yb], [x1, yb]]); c.crease([[a, y1], [b, y1]]);
+  c.crease([[x0, yb], [x1, yb]]); c.crease([[x0, y1], [x1, y1]]);
 }
 
-function flapDust(c, x0, x1, yb, sgn, dh) {
-  const pts = [[x0 + 1.5, yb], [x0 + 3.5, yb + sgn * (dh - 5)], [x0 + 9, yb + sgn * dh], [x1 - 9, yb + sgn * dh], [x1 - 3.5, yb + sgn * 5], [x1 - 1.5, yb]];
-  c.cut(pts); c.fill(pts); c.crease([[x0 + 1.5, yb], [x1 - 1.5, yb]]);
-  c.cut([[x0, yb], [x0 + 1.5, yb]]); c.cut([[x1 - 1.5, yb], [x1, yb]]);
+function flapDust(c, x0, x1, yb, sgn, dh, t) {
+  const pts = closureOutline('dust',x1-x0,dh,t).map(([x,y])=>[x0+x,yb+sgn*y]);
+  c.cut(pts); c.fill(pts); c.crease([pts[0],pts[pts.length-1]]);
+  c.cut([[x0,yb],pts[0]]); c.cut([pts[pts.length-1],[x1,yb]]);
 }
 
 // 飞机盒：一片成型免胶，侧耳折入
 export function genMailer(c, s, t) {
   const L = s.L, W = s.W, H = s.H, Lc = L + 2 * t;
-  const tk = Math.min(H * 0.7, 28), Wl = W + 3 * t, Hb = H + t, Wb = W + t, Hf = H, Sw = H + t;
+  const {tuck:tk,dust:dw}=closureOf(s,t), Wl = W + 3 * t, Hb = H + t, Wb = W + t, Hf = H, Sw = H + t;
   const y1 = Wl, y2 = y1 + Hb, y3 = y2 + Wb, y4 = y3 + Hf;
   const rows = [[0, y1, '盖（外面）', 'mailer-lid'], [y1, y2, '背面', 'mailer-back'], [y2, y3, '底面', 'mailer-bottom'], [y3, y4, '正面', 'mailer-front']];
   for (let i = 0; i < rows.length; i++) { const rr = rows[i], pts = c.rect(0, rr[0], Lc, rr[1] - rr[0]); c.fill(pts); c.region(pts, { panelId: rr[3], role: i === 0 ? 'hero' : 'design', surface: 'outside', up: 'top' }); c.label(Lc / 2, (rr[0] + rr[1]) / 2, rr[2]); c.safeR(0, rr[0], Lc, rr[1] - rr[0]); }
-  const rt = 5;
-  const tp = [[4, 0], [4, -tk + rt]].concat(c.q([4, -tk + rt], [4, -tk], [4 + rt, -tk], 'tr').slice(1)).concat([[Lc - 4 - rt, -tk]]).concat(c.q([Lc - 4 - rt, -tk], [Lc - 4, -tk], [Lc - 4, -tk + rt], 'tr').slice(1)).concat([[Lc - 4, 0]]);
-  c.cut(tp); c.fill(tp); c.crease([[4, 0], [Lc - 4, 0]]); c.cut([[0, 0], [4, 0]]); c.cut([[Lc - 4, 0], [Lc, 0]]);
+  const tp = closureOutline('tuck',Lc,tk,t).map(([x,y])=>[x,-y]);
+  c.cut(tp); c.fill(tp); c.crease([[0, 0], [Lc, 0]]);
   c.crease([[0, y1], [Lc, y1]]); c.crease([[0, y2], [Lc, y2]]); c.crease([[0, y3], [Lc, y3]]);
   c.cut([[0, y4], [Lc, y4]]); c.cut([[0, y3], [0, y4]]); c.cut([[Lc, y3], [Lc, y4]]);
   c.cut([[0, y1], [0, y2]]); c.cut([[Lc, y1], [Lc, y2]]);
-  const dw = Math.min(H * 0.8, 26);
-  const dl = [[0, 2], [-dw + 5, 4.5], [-dw, 11], [-dw, y1 - 10], [-5, y1 - 3.5], [0, y1 - 2]];
+  const dl = closureOutline('dust',y1,dw,t).map(([x,y])=>[-y,x]);
   const mir = pts => pts.map(p => [Lc - p[0], p[1]]);
-  c.cut(dl); c.fill(dl); c.crease([[0, 2], [0, y1 - 2]]); c.cut([[0, 0], [0, 2]]); c.cut([[0, y1 - 2], [0, y1]]);
-  c.cut(mir(dl)); c.fill(mir(dl)); c.crease([[Lc, 2], [Lc, y1 - 2]]); c.cut([[Lc, 0], [Lc, 2]]); c.cut([[Lc, y1 - 2], [Lc, y1]]);
+  c.cut(dl); c.fill(dl); c.crease([dl[0],dl[dl.length-1]]); c.cut([[0,0],dl[0]]); c.cut([dl[dl.length-1],[0,y1]]);
+  c.cut(mir(dl)); c.fill(mir(dl)); c.crease(mir([dl[0],dl[dl.length-1]])); c.cut(mir([[0,0],dl[0]])); c.cut(mir([dl[dl.length-1],[0,y1]]));
   const wallL = c.rect(-Sw, y2, Sw, Wb);
   c.fill(wallL); c.region(wallL, { panelId: 'mailer-wall-left', surface: 'outside', up: 'top' }); c.label(-Sw / 2, y2 + Wb / 2, '侧墙', 3.2);
   c.crease([[0, y2], [0, y3]]);
@@ -181,13 +175,13 @@ export function genTray(c, Lt, Wt, hh, ox, nm, panelConfig = {}) {
 
 // 抽屉盒套筒
 export function genSleeve(c, s, t, ox) {
-  const L = s.L, W = s.W, H = s.H, g = 12, band = L + 2;
+  const L = s.L, W = s.W, H = s.H, g = closureOf(s,t).glue, band = L + 2;
   const cols = [H + 2 * t, W + 3 * t, H + 3 * t, W + 4 * t];
   const xs = [ox]; cols.forEach(w => xs.push(xs[xs.length - 1] + w));
   const names = ['侧面', '顶面', '侧面', '底面'], panelIds = ['sleeve-side-left', 'sleeve-top', 'sleeve-side-right', 'sleeve-bottom'];
   for (let i = 0; i < 4; i++) { const pts = c.rect(xs[i], 0, cols[i], band); c.fill(pts); c.region(pts, { panelId: panelIds[i], role: i === 1 ? 'hero' : 'design', surface: 'outside', up: 'left' }); c.label(xs[i] + cols[i] / 2, band / 2, names[i], 3.6); c.safeR(xs[i], 0, cols[i], band); }
   c.label(ox + (xs[4] - ox) / 2, -8, '套筒（外套）', 4.5);
-  const gp = [[ox, 0], [ox - g, 4], [ox - g, band - 4], [ox, band]];
+  const gp = closureOutline('glue',band,g,t).map(([x,y])=>[ox-y,x]);
   c.fill(gp); c.cut(gp); c.crease([[ox, 0], [ox, band]]);
   for (let i = 1; i < 4; i++) c.crease([[xs[i], 0], [xs[i], band]]);
   c.cut([[xs[4], 0], [xs[4], band]]);

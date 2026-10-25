@@ -2,6 +2,7 @@
 // 2D 视图、3D 网格、PDF 导出全部由本函数派生；按参数 key 缓存。
 // 手动编辑存为覆盖指令流（ovr 节点位移、typeOvr 线型切换），在模板求值结果上重放。
 import { genTuck, genMailer, genTray, genSleeve, genTube } from './templates.js';
+import { closureOf } from './closure.js';
 
 let _key = null, _val = null;
 
@@ -20,8 +21,8 @@ export function geomOf(s, t) {
   const panel = (pts, meta) => { fill(pts); region(pts, meta); };
   const safeR = (x, y, w, h, m) => { m = m ?? Math.min(3, w / 4, h / 4); o.safes.push([x + m, y + m, w - 2 * m, h - 2 * m]); };
   const label = (x, y, name, fs) => o.labels.push({ x: r2(x), y: r2(y + 1.4), name, fs: fs || 4 });
-  const dimH = (x1, x2, y, txt) => { o.dims.push({ gtf: 'translate(' + r2(x1) + ' ' + r2(y) + ')', len: r2(x2 - x1), mid: r2((x2 - x1) / 2), label: txt }); tr([[x1, y - 5], [x2, y + 3]], o.vbb); };
-  const dimV = (y1, y2, x, txt) => { o.dims.push({ gtf: 'translate(' + r2(x) + ' ' + r2(y2) + ') rotate(-90)', len: r2(y2 - y1), mid: r2((y2 - y1) / 2), label: txt }); tr([[x - 5, y1], [x + 3, y2]], o.vbb); };
+  const dimH = (x1, x2, y, txt) => { o.dims.push({ axis:'h',x:x1,y,gtf: 'translate(' + r2(x1) + ' ' + r2(y) + ')', len: r2(x2 - x1), mid: r2((x2 - x1) / 2), label: txt }); tr([[x1, y - 5], [x2, y + 3]], o.vbb); };
+  const dimV = (y1, y2, x, txt) => { o.dims.push({ axis:'v',x,y:y2,gtf: 'translate(' + r2(x) + ' ' + r2(y2) + ') rotate(-90)', len: r2(y2 - y1), mid: r2((y2 - y1) / 2), label: txt }); tr([[x - 5, y1], [x + 3, y2]], o.vbb); };
   // 二次贝塞尔采样；带 tag 的调用记录为圆弧段（arcRuns 圆弧元数据）
   const q = (p0, pc, p1, tag, n) => {
     n = n || 5; const out = [];
@@ -32,6 +33,7 @@ export function geomOf(s, t) {
   const rect = (x, y, w, h) => [[x, y], [x + w, y], [x + w, y + h], [x, y + h]];
   const fmt = v => Math.round(v * 10) / 10;
   const ctx = { cut, crease, fill, panel, region, safeR, label, dimH, dimV, q, rect, fmt };
+  o.closure = closureOf(s,t);
 
   if (s.tpl === 'rte' || s.tpl === 'ste') genTuck(ctx, s, t, s.tpl === 'rte');
   else if (s.tpl === 'mailer') genMailer(ctx, s, t);

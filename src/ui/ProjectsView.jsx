@@ -47,16 +47,20 @@ export function ProjectsView({ library, deliveryBusy = false }) {
       <div className="projects-grid">{records.map(record => {
         const doc = record.project, current = record.id === library.active?.id;
         const tpl = TPLS.find(t => t.id === doc.box.tpl)?.name || doc.box.tpl;
+        const documents = (doc.meta.documents || []).filter(d => /^\/(drafts|docs)\//.test(d.href));
+        const customerDocuments = documents.filter(d => /客户.*方案/.test(d.title + d.href));
+        const otherDocuments = documents.filter(d => !customerDocuments.includes(d));
         return <article className={'project-card' + (current ? ' current' : '')} key={record.id} aria-label={'项目：' + doc.meta.name}>
           <button className="project-cover" disabled={busy || trash} aria-label={'打开项目：' + doc.meta.name} onClick={() => library.open(record)}>
             {doc.meta.thumbnail ? <img src={doc.meta.thumbnail} alt={doc.meta.name + ' 包装预览'} /> : <div className="project-placeholder"><span aria-hidden="true">▱</span><strong>{tpl}</strong><small>{doc.box.L} × {doc.box.W} × {doc.box.H} mm · 内尺寸</small></div>}
             {current && <span className="project-badge">当前项目</span>}
           </button>
           <div className="project-info"><h2>{doc.meta.name}</h2><p>{tpl} · {doc.design.layers.length} 个图层</p><small>{trash ? '移入回收站 ' + new Date(record.deletedAt).toLocaleString('zh-CN') : '修改于 ' + new Date(doc.meta.updatedAt).toLocaleString('zh-CN')}</small></div>
-          {!!doc.meta.documents?.length && <details className="project-documents"><summary>设计方案与资料 · {doc.meta.documents.length}</summary>{doc.meta.documents.filter(d => /^\/(drafts|docs)\//.test(d.href)).map(d => <a key={d.href} href={asset(d.href)} target="_blank" rel="noopener noreferrer">{d.title}</a>)}</details>}
+          {!!otherDocuments.length && <details className="project-documents"><summary>设计方案与资料 · {otherDocuments.length}</summary>{otherDocuments.map(d => <a key={d.href} href={asset(d.href)} target="_blank" rel="noopener noreferrer">{d.title}</a>)}</details>}
           <div className="project-buttons">{trash ? <button disabled={busy} onClick={() => library.restore(record)}>恢复项目</button> : <>
             <button className="primary" disabled={busy} onClick={() => library.open(record)}>打开项目</button>
             <ActionMenu label="项目更多操作">
+              {customerDocuments.length ? customerDocuments.map(d => <a key={d.href} href={asset(d.href)} target="_blank" rel="noopener noreferrer">给客户的方案{customerDocuments.length > 1 ? ' · ' + d.title : ''}</a>) : <button disabled>给客户的方案（尚未生成）</button>}
               <button disabled={busy} onClick={() => library.rename(record)}>重命名</button>
               <button className="danger" disabled={busy} onClick={() => library.remove(record)}>移入回收站</button>
             </ActionMenu>

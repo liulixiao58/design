@@ -4,6 +4,7 @@ import { store, useStore } from '../state/store.js';
 import { asset } from '../asset.js';
 import { bboxOf, rotatedResizeBox, cropResize } from '../design/layers.js';
 import { bboxOfPts, containerAt, containerOfLayer } from '../design/containers.js';
+import { sheetViewMetrics } from '../dieline/viewMetrics.js';
 
 export function SheetCanvas({ view, g, children, onImageDrop }) {
   const s = useStore();
@@ -18,6 +19,7 @@ export function SheetCanvas({ view, g, children, onImageDrop }) {
   const [snapG, setSnapG] = useState(null);
   const [dropPanel, setDropPanel] = useState(null);
   const k = s.k || 1;
+  const guides = sheetViewMetrics(g,k,s.bleed);
   const editOn = s.editMode && view === 'structure';
   const hasImageDrag = e => Array.from((e.dataTransfer && e.dataTransfer.items) || []).some(it => it.kind === 'file' && /^image\/(png|jpeg|webp)$/i.test(it.type));
 
@@ -28,7 +30,7 @@ export function SheetCanvas({ view, g, children, onImageDrop }) {
   const fit = () => {
     const el = elRef.current; if (!el) return;
     const r = el.getBoundingClientRect(); if (r.width < 50) return;
-    const bb = g.vbb, pad = 44;
+    const bb = g.vbb, pad = 64;
     const w = bb[2] - bb[0], h = bb[3] - bb[1];
     const k2 = Math.min((r.width - 2 * pad) / w, (r.height - 2 * pad) / h);
     store.set({ k: k2, tx: (r.width - k2 * w) / 2 - k2 * bb[0], ty: (r.height - k2 * h) / 2 - k2 * bb[1] });
@@ -315,24 +317,24 @@ export function SheetCanvas({ view, g, children, onImageDrop }) {
         )}
         <g transform={'translate(' + s.tx + ' ' + s.ty + ') scale(' + k + ')'}>
           {view === 'structure' && (<>
-            {s.show.bleed && s.bleed > 0 && <path d={g.fillPath} fill="none" stroke="rgba(154,91,31,0.22)" strokeWidth={s.bleed * 2} strokeLinejoin="round" strokeLinecap="round" />}
+            {s.show.bleed && s.bleed > 0 && <path data-guide="bleed" d={g.fillPath} fill="none" stroke="rgba(154,91,31,0.35)" strokeWidth={guides.bleedStroke} strokeLinejoin="round" strokeLinecap="round"><title>{'实际出血 '+s.bleed+' mm'+(guides.bleedEnhanced?'；当前视图增强显示宽度，导出仍为真实毫米值':'')}</title></path>}
             <path d={g.fillPath} fill="#fdfcf7" stroke="none" />
-            {s.show.safe && <path d={g.safePath} fill="none" stroke="#c9a227" strokeWidth={0.45} strokeDasharray="2.2 1.8" />}
             <path d={g.creasePath} fill="none" stroke="#2E7D46" strokeWidth={1.5} style={{ vectorEffect: 'non-scaling-stroke' }} />
             <path d={g.cutPath} fill="none" stroke="#C8102E" strokeWidth={1.6} style={{ vectorEffect: 'non-scaling-stroke' }} />
-            {s.show.labels && <g>{g.labels.map((p, i) => <text key={i} x={p.x} y={p.y} fontSize={p.fs} textAnchor="middle" style={{ fill: '#a59a85', fontWeight: 500, userSelect: 'none' }}>{p.name}</text>)}</g>}
-            {s.show.dims && <g>{g.dims.map((d, i) => (
-              <g key={i} transform={d.gtf}>
+            {s.show.safe && <path data-guide="safe" d={g.safePath} fill="none" stroke="#c9a227" strokeWidth={1} strokeDasharray={guides.dash} style={{vectorEffect:'non-scaling-stroke'}} />}
+            {s.show.labels && <g>{g.labels.map((p, i) => <text key={i} x={p.x} y={p.y} fontSize={Math.max(p.fs,guides.fontSize)} textAnchor="middle" style={{ fill: '#6d6557', fontWeight: 500, userSelect: 'none' }}>{p.name}</text>)}</g>}
+            {s.show.dims && <g data-guide="dimensions">{guides.dimensions.map((d, i) => (
+              <g key={i} transform={d.screenTransform}>
                 <line x1={0} y1={0} x2={d.len} y2={0} stroke="#8a8071" strokeWidth={1} style={{ vectorEffect: 'non-scaling-stroke' }} />
-                <line x1={0} y1={-2.4} x2={0} y2={2.4} stroke="#8a8071" strokeWidth={1} style={{ vectorEffect: 'non-scaling-stroke' }} />
-                <line x1={d.len} y1={-2.4} x2={d.len} y2={2.4} stroke="#8a8071" strokeWidth={1} style={{ vectorEffect: 'non-scaling-stroke' }} />
-                <text x={d.mid} y={-2.2} fontSize={3.4} textAnchor="middle" style={{ fill: '#6d6557', fontFamily: "'JetBrains Mono',monospace", userSelect: 'none' }}>{d.label}</text>
+                <line x1={0} y1={-guides.tick} x2={0} y2={guides.tick} stroke="#8a8071" strokeWidth={1} style={{ vectorEffect: 'non-scaling-stroke' }} />
+                <line x1={d.len} y1={-guides.tick} x2={d.len} y2={guides.tick} stroke="#8a8071" strokeWidth={1} style={{ vectorEffect: 'non-scaling-stroke' }} />
+                <text x={d.mid} y={-guides.textOffset} fontSize={guides.fontSize} textAnchor="middle" style={{ fill: '#6d6557', fontFamily: "'JetBrains Mono',monospace", userSelect: 'none' }}>{d.label}</text>
               </g>))}</g>}
             {editOn && renderLineEditor()}
           </>)}
           {view === 'design' && (<>
             <path d={g.fillPath} fill="#fdfcf7" stroke="none" />
-            <path d={g.safePath} fill="none" stroke="#ddd0ab" strokeWidth={0.4} strokeDasharray="2.2 1.8" />
+            <path d={g.safePath} fill="none" stroke="#ddd0ab" strokeWidth={1} strokeDasharray={guides.dash} style={{vectorEffect:'non-scaling-stroke'}} />
             <path d={g.creasePath} fill="none" stroke="#a8c9ae" strokeWidth={1} style={{ vectorEffect: 'non-scaling-stroke' }} />
             <path d={g.cutPath} fill="none" stroke="#dfaeb2" strokeWidth={1} style={{ vectorEffect: 'non-scaling-stroke' }} />
             {dropPanel && <polygon points={dropPanel.pts.map(p => p[0] + ',' + p[1]).join(' ')} fill="rgba(40,167,161,0.18)" stroke="#28a7a1" strokeWidth={2} style={{ vectorEffect: 'non-scaling-stroke', pointerEvents: 'none' }} />}
@@ -359,7 +361,7 @@ export function SheetCanvas({ view, g, children, onImageDrop }) {
           <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 14, height: 2, background: '#C8102E', display: 'inline-block' }} />切线</span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 14, height: 2, background: '#2E7D46', display: 'inline-block' }} />压痕</span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 14, height: 0, borderTop: '2px dashed #c9a227', display: 'inline-block' }} />安全区</span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 14, height: 6, background: 'rgba(154,91,31,0.25)', display: 'inline-block' }} />出血带</span>
+          <span title="显示增强仅帮助缩小时辨认出血带，不改变实际出血及导出尺寸" style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 14, height: 6, background: 'rgba(154,91,31,0.25)', display: 'inline-block' }} />出血 {s.bleed}mm{guides.bleedEnhanced?' · 显示增强':''}</span>
         </>) : (<>
           <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 12, height: 8, background: 'linear-gradient(135deg,#E9CB6E,#B08A1E)', display: 'inline-block', borderRadius: 2 }} />烫金</span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 12, height: 0, borderTop: '2px dashed #5a9bc4', display: 'inline-block' }} />局部UV</span>

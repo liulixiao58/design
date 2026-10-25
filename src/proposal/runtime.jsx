@@ -11,6 +11,7 @@ import { bboxOfPts, clipPtsOf } from '../design/containers.js';
 import { creaseSegsOf } from '../dieline/geom.js';
 import './style.css';
 import { productionIssues } from '../design/productionCheck.js';
+import { productionReleaseIssues } from '../design/acceptance.js';
 import { customerDocument, validateCustomer } from './customer.js';
 
 // 保留内嵌运行代码，供客户专用页面启用同源3D；客户正文另行生成。
@@ -96,7 +97,7 @@ function Proposal({ p, state, hash }) {
   const open = async () => {
     setPhase('opening'); setMessage('正在连接本地工作台…');
     try {
-      const issues=productionIssues(state.layers,{loaded:true,reconstruction:state.reconstruction});
+      const issues=productionIssues(state.layers,{loaded:true,reconstruction:state.reconstruction}).concat(productionReleaseIssues(state));
       if(p.deliveryMode==='production'&&issues.length)throw new Error('生产交接被阻止：'+issues.join('；'));
       await openProposalInWorkbench({ project: p.project, fonts: p.fonts, approval: { id: p.id, title: p.title, revision: p.revision, deliveryMode:p.deliveryMode||'concept', projectHash: hash, approvedAt: new Date().toISOString() } });
       setPhase('loaded'); setMessage('同一版本已载入工作台。文字、图片与工艺可分别编辑；修改后请导出工程保存。');
@@ -134,6 +135,11 @@ function Proposal({ p, state, hash }) {
 async function start() {
   if(proposal.audience==='customer'){
     validateCustomer(proposal.customer);validateProject(proposal.project);
+    document.getElementById('customer-download')?.addEventListener('click',()=>{
+      const url=URL.createObjectURL(new Blob([sourceHtml],{type:'text/html;charset=utf-8'}));
+      const link=document.createElement('a');link.href=url;link.download=proposal.customer.title.replace(/[<>:"/\\|?*\u0000-\u001f]/g,'_')+'-客户方案.html';link.click();
+      setTimeout(()=>URL.revokeObjectURL(url),1000);
+    });
     const deadline=promise=>Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error('交互资源加载超时，仍可查看完整静态方案')),20000))]);
     try{
       await deadline(loadProposalFonts(proposal.fonts));

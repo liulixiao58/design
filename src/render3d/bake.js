@@ -84,6 +84,11 @@ export function paintFoilRoughness(baked, value) {
   if (baked.maskSilver) maskDraw(baked.roughC, foilR, baked.maskSilver);
 }
 
+export function atlasScaleOf(Wmm,Hmm,detail=false) {
+  const edge=detail?3072:4096,pixels=detail?9_437_184:4_194_304;
+  return Math.min(detail?24:8,edge/Math.max(Wmm,Hmm),Math.sqrt(pixels/(Wmm*Hmm)));
+}
+
 export function bakeAtlas(o) {
   const { layers, panels, sbb, bleed, paperId, filmId, embDepth, embDir, embBoost } = o;
   const paper = paperPreset(paperId);
@@ -92,7 +97,7 @@ export function bakeAtlas(o) {
   const grainScale = Math.max(3, Math.min(20, o.grainScale || paper.grainMm));
   const pad = Math.max(2, bleed || 0);
   const Wmm = (sbb[2] - sbb[0]) + 2 * pad, Hmm = (sbb[3] - sbb[1]) + 2 * pad;
-  const S = Math.min(o.detail ? 24 : 8, (o.detail?3072:4096) / Math.max(Wmm, Hmm));
+  const S = atlasScaleOf(Wmm,Hmm,o.detail);
   const W = Math.round(Wmm * S), H = Math.round(Hmm * S);
   const ox = sbb[0] - pad, oy = sbb[1] - pad;
   const X = v => (v - ox) * S, Y = v => (v - oy) * S;

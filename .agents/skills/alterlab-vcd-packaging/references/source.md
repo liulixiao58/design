@@ -1,12 +1,5 @@
-# 来源与本地适配记录
+# 方法参考与公开分发边界
 
-- 上游仓库：https://github.com/roohe/agentic-super-skills
-- 原文件：`skills_library/alterlab-vcd-packaging/SKILL.md`
-- 固定提交：`f483e54f3ad5f202a77d45f2e57f8d970b71195f`
-- 原文链接：https://github.com/roohe/agentic-super-skills/blob/f483e54f3ad5f202a77d45f2e57f8d970b71195f/skills_library/alterlab-vcd-packaging/SKILL.md
-- 下载日期：2026-10-18
-- 未修改原文：`upstream-packaging.md`
-- 原文 SHA256：`197a24378d23bef47931f8e548646b2ed300fb579c8b7c676f36005c27a04e4b`
-- 来源仓库 GitHub API 的 license 字段为空，尚未核实明确的再分发许可。本次为项目本地参考使用，若要公开发布适配内容或打包分发，先核实上游授权。
+本项目包装流程的方法参考包括 [AlterLab Packaging Designer](https://github.com/roohe/agentic-super-skills/tree/f483e54f3ad5f202a77d45f2e57f8d970b71195f/skills_library/alterlab-vcd-packaging)。原仓库未提供已核实的明确再分发许可，因此本公开版本仅保留来源链接，不附第三方参考全文，也不对第三方内容授予MIT许可。
 
-本地 `SKILL.md` 保留上游包装专业主题，新增中文分轮访谈、客户选方向、来源记录、OpenBox3D 工程生成/加载及实际验证。对原文中的固定生产数值、角色经历和验收承诺作了适用范围说明。
+本项目工作流规则记录中文访谈、研究取舍、素材预算、同源母稿、真实工艺、工程交接和核样边界。参考资料不构成具体包装的结构、印前或工厂认证。

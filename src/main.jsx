@@ -8,6 +8,7 @@ import { loadPresetBox } from './preset/presetBox.js';
 import { projectStateOf } from './projects/projects.js';
 import { receiveProposal } from './projects/proposalBridge.js';
 import { productionIssues } from './design/productionCheck.js';
+import { productionReleaseIssues } from './design/acceptance.js';
 
 // 先注入预设示例盒再挂载，避免空白盒闪屏；素材加载失败也保证应用可开。
 // ?heroTest/?embTest/?surfaceTest 调试场景自带测试图层，跳过预设注入。
@@ -18,7 +19,7 @@ async function loadInitialBox() {
     const { project, approval, sender } = await receiveProposal(token);
     const patch = await projectStateOf(project, 'design');
     if(approval.deliveryMode==='production'){
-      const issues=productionIssues(patch.layers,{loaded:true,reconstruction:patch.reconstruction});
+      const issues=productionIssues(patch.layers,{loaded:true,reconstruction:patch.reconstruction}).concat(productionReleaseIssues(patch));
       if(issues.length){sender.postMessage({type:'openbox3d:error',token,message:'生产交接被阻止：'+issues.join('；')},'*');throw new Error('生产交接预检不通过');}
     }
     if (patch.layers.some(l => l.kind === 'image' && !l.img)) {

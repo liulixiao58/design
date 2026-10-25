@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { ST, btnSt } from './widgets.jsx';
 import { WORKFLOW_BRIEF_FIELDS, WORKFLOW_STAGES, normalizeWorkflow, nextWorkflowStage, workflowGate } from '../workflow.js';
+import {SourceBudget} from './SourceBudget.jsx';
 
 const card = { background: 'var(--ui-canvas)', border: '1px solid var(--ui-border-soft)', borderRadius: 8, padding: '20px 22px' };
 const input = { width: '100%', border: '1px solid var(--ui-border)', borderRadius: 5, padding: '8px 9px', background: 'var(--ui-canvas)', color: 'var(--ui-ink)', fontSize: 12 };
@@ -29,6 +30,14 @@ export function WorkflowView({ state, checks, onChange, onNavigate }) {
   return <section className="workflow-view" aria-label="包装设计流程">
     <div className="workflow-heading"><div><div className="projects-eyebrow">PACKAGING WORKFLOW</div><h1>项目流程</h1><p>按阶段完成需求、方案、设计与交付。未满足放行条件时，不会标记为完成。</p></div><button className="primary" onClick={save}>{saved ? '已保存' : '保存流程资料'}</button></div>
     <div className="workflow-steps" aria-label="流程阶段">{WORKFLOW_STAGES.map((item, index) => <button key={item.id} className={item.id === current.id ? 'active' : ''} onClick={() => update({ stage: item.id })}><span>{index + 1}</span><strong>{item.label}</strong><small>{gates[item.id] ? '可放行' : '待完成'}</small></button>)}</div>
+    {['proposal','design'].includes(current.id)&&<div style={{...card,marginBottom:14}}>
+      <label>本次方案确认范围 <select aria-label="方案确认范围" value={draft.proposal.purpose||'concept'} onChange={e=>update({proposal:{...draft.proposal,purpose:e.target.value,confirmed:false}})}>
+        <option value="concept">概念选款（不承诺生产）</option><option value="production">生产母稿技术确认</option>
+      </select></label>
+      <p className="workflow-hint">生产母稿技术确认要求尺寸基准和当前素材技术检查通过；不代替视觉一致性及工厂验收。</p>
+      {draft.proposal.purpose==='production'&&checks.production.length>0&&<p role="alert" className="workflow-block">当前有 {checks.production.length} 项素材技术问题，生产母稿确认不能放行。请先处理下方原图，不要重新生成整盒效果图。</p>}
+      <SourceBudget layers={state.layers} plan={draft.proposal.assetPlan} onPlanChange={assetPlan=>update({proposal:{...draft.proposal,assetPlan,confirmed:false}})}/>
+    </div>}
     <div className="workflow-grid">
       <div style={{ display: 'grid', gap: 14 }}>
         <div style={card}><ST>{current.short}</ST><p className="workflow-description">{current.description}</p>

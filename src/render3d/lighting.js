@@ -87,7 +87,7 @@ export function setupStudio(renderer, scene, shadowSampleCount = 5) {
   const configureShadowLight = light => {
     light.shadow.camera.left = -shadowExtent; light.shadow.camera.right = shadowExtent;
     light.shadow.camera.top = shadowExtent; light.shadow.camera.bottom = -shadowExtent;
-    light.shadow.camera.far = 1600; light.shadow.camera.updateProjectionMatrix();
+    light.shadow.camera.far = Math.max(1600,shadowExtent*4); light.shadow.camera.updateProjectionMatrix();
     light.shadow.bias = -0.00008; light.shadow.normalBias = 0.04; light.shadow.radius = 8;
     light.shadow.needsUpdate = true;
   };
@@ -364,7 +364,7 @@ export function setupStudio(renderer, scene, shadowSampleCount = 5) {
     setHelperSelected(id) { const next = id || null; if (helperSelectedId === next) return; helperSelectedId = next; updateHelpers(); },
     setHelperTarget(x, y, z) { helperTarget.set(x, y, z); updateHelpers(); },
     setShadowBounds(l, w, h) {
-      shadowExtent = Math.min(600, Math.max(155, Math.max(+l || 0, +w || 0, +h || 0) * 1.3));
+      shadowExtent = Math.max(155, Math.max(+l || 0, +w || 0, +h || 0) * 1.3);
       entries.forEach(e => { if (e.role === 'shadow') e.lights.forEach(configureShadowLight); });
     },
     updateHelpers,

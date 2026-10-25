@@ -1,13 +1,20 @@
 import catalog from './historyCatalog.json' with { type: 'json' };
 import { projectStateOf } from './projects.js';
 import { listProjects, saveProject } from './projectLibrary.js';
+import { normalizeRig } from '../render3d/rig.js';
 
 export function historyContent(doc) {
-  const { id, name, ...scene } = doc.scene || {};
+  const { id, name, ...scene } = normalizeRig(doc.scene || {});
   return JSON.stringify([doc.box, doc.design, doc.appearance, scene]);
 }
 export function mergeDocuments(previous = [], incoming = []) {
   return [...new Map([...previous, ...incoming].map(d => [d.href, d])).values()];
+}
+
+export function findHistoryProject(records, source, content) {
+  const matches = r => r.project.meta.historySources?.includes(source) || historyContent(r.project) === content;
+  const live = records.findIndex(r => !r.deletedAt && matches(r));
+  return live >= 0 ? live : records.findIndex(matches);
 }
 
 export async function importHistoryProjects() {
@@ -18,7 +25,7 @@ export async function importHistoryProjects() {
     const load = loaders['../../' + item.source];
     if (!load) throw new Error('历史工程不存在：' + item.source);
     const doc = JSON.parse(await load()), content = historyContent(doc);
-    const index = records.findIndex(r => r.project.meta.historySources?.includes(item.source) || historyContent(r.project) === content);
+    const index = findHistoryProject(records, item.source, content);
     const previous = records[index];
     if (previous?.deletedAt) { skipped++; continue; }
     const documents = mergeDocuments(previous?.project.meta.documents, item.documents);

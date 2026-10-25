@@ -6,7 +6,8 @@ const image = (src,alt) => /^data:image\/(png|jpeg|webp|svg\+xml);base64,/.test(
 
 export function validateCustomer(c) {
   if(!c||!text(c.title)||!text(c.tagline)||!Array.isArray(c.story)||!c.story.length||!c.story.every(text))throw new Error('请先完成客户方案的标题、设计故事');
-  if(!Array.isArray(c.sections)||c.sections.length!==9||new Set(c.sections.map(s=>s.id)).size!==9||c.sections.some(s=>!text(s.id)||!text(s.title)||!text(s.body)||!Array.isArray(s.visuals)||!s.visuals.length))throw new Error('客户视觉系统须有九个完整子板块');
+  const count=c.testEdition===true?4:9;
+  if(!Array.isArray(c.sections)||c.sections.length!==count||new Set(c.sections.map(s=>s.id)).size!==count||c.sections.some(s=>!text(s.id)||!text(s.title)||!text(s.body)||!Array.isArray(s.visuals)||!s.visuals.length))throw new Error(c.testEdition===true?'客户测试版须有四个完整子板块':'客户视觉系统须有九个完整子板块');
   if(c.references!=null&&(!Array.isArray(c.references)||c.references.some(r=>!text(r.title)||!httpUrl(r.url))))throw new Error('客户方案参考链接无效');
   return c;
 }
@@ -40,5 +41,5 @@ export function customerDocument(source,p,previews) {
   const payload=customerPayloadOf(p,previews);
   const runtime=source.match(/<script>([\s\S]*)<\/script>/i)?.[1];
   if(!runtime)throw new Error('离线运行代码缺失，请重新导出设计师报告');
-  return `<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; connect-src data: blob:; base-uri 'none'; form-action 'none'"><title>${esc(payload.customer.title)} · 客户设计方案</title><style>${CUSTOMER_CSS}${CUSTOMER_LARGE_CSS}</style></head><body class="customer-page">${customerMarkup(payload)}<script id="proposal-data" type="application/json">${jsonForHtml(payload)}</script><script>${runtime}</script></body></html>`;
+  return `<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; connect-src data: blob:; base-uri 'none'; form-action 'none'"><title>${esc(payload.customer.title)} · 客户设计方案</title><style>${CUSTOMER_CSS}${CUSTOMER_LARGE_CSS}.customer-download{display:flex;align-items:center;justify-content:flex-end;gap:16px;padding:16px 24px;border-bottom:1px solid #d9d0cb;font-size:13px}.customer-download button{background:#30262b;color:white;border:0;border-radius:6px;padding:11px 18px;cursor:pointer}</style></head><body class="customer-page"><header class="customer-download"><span>${payload.customer.testEdition===true?'测试版 · 01—04':'独立HTML文件'}</span><button id="customer-download" type="button">下载方案（HTML）</button></header>${customerMarkup(payload)}<script id="proposal-data" type="application/json">${jsonForHtml(payload)}</script><script>${runtime}</script></body></html>`;
 }

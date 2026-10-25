@@ -5,7 +5,7 @@ import { geomOf } from '../dieline/geom.js';
 import { drawLayer } from '../design/layers.js';
 import { clipPtsOf } from '../design/containers.js';
 import { TPLS } from '../dieline/templates.js';
-import { pageBoxes, rasterFrame } from './coordinates.js';
+import { pageBoxes, rasterFrame, pdfPageLayout, reviewRasterScale } from './coordinates.js';
 import { PENDING_FINISHES } from '../design/production.js';
 export { pageBoxes } from './coordinates.js';
 
@@ -18,7 +18,7 @@ export function writePdf(objs, fname, options = {}) {
   const parts = [], offs = [];
   let len = 0;
   const push = p => { parts.push(p); len += p.length; };
-  push(enc.encode('%PDF-1.4\n'));
+  push(enc.encode(options.userUnit>1?'%PDF-1.7\n':'%PDF-1.4\n'));
   objs.forEach((o, i) => {
     offs.push(len);
     push(enc.encode((i + 1) + ' 0 obj\n'));
@@ -82,7 +82,7 @@ async function renderArt(s, g, boxes, S, processOnly = false) {
 }
 
 export async function exportPDF(s, mat, mode = 'cmyk') {
-  if(mode!=='rgb')return (await import('./productionBundle.js')).exportProductionBundle(s,mat);
+  if(mode!=='rgb')return (await import('./productionBundle.js')).exportProductionBundle(s,mat,{proof:mode==='proof'});
   if(mode==='cmyk'&&s.layers.some(l=>l.visible&&PENDING_FINISHES.includes(l.finish)))throw new Error('新增工艺版尚无成品预览，请导出专业净稿中的普通印刷内容；工艺生产文件将在第5项接入。');
   const professional = mode === 'professional';
   const missing = s.layers.filter(l => l.visible && (l.finish || 'none') === 'none' && l.kind === 'image' && !l.img);
@@ -90,7 +90,8 @@ export async function exportPDF(s, mat, mode = 'cmyk') {
   const g = geomOf(s, mat.t);
   const boxes = pageBoxes(s, g);
   const { b, Wpt, Hpt, trim, trimRect } = boxes;
-  const S = mode === 'rgb' ? 8 : 300 / 25.4;   // 生产/专业稿 300dpi，评审稿 ≈203dpi
+  const layout=pdfPageLayout(boxes),unit=layout.userUnit;
+  const S = mode === 'rgb' ? reviewRasterScale(boxes) : 300 / 25.4;
   const cv = await renderArt(s, g, boxes, S, professional);
   // 图像对象
   let imgObj;
@@ -115,7 +116,7 @@ export async function exportPDF(s, mat, mode = 'cmyk') {
     + 'BT /F1 7 Tf 0.13 0.11 0.09 rg 6 ' + (Hpt - 11).toFixed(2) + ' Td (' + info + ') Tj ET\n'
     + 'BT /F1 6 Tf 0.78 0.06 0.18 rg 6 ' + (Hpt - 20).toFixed(2) + ' Td (RED = CUT' + (mode === 'cmyk' ? ' / CutContour spot overprint' : '') + ') Tj ET\n'
     + 'BT /F1 6 Tf 0.18 0.49 0.27 rg 6 ' + (Hpt - 28).toFixed(2) + ' Td (GREEN = CREASE' + (mode === 'cmyk' ? ' / Crease spot' : '') + ' / TRIM ' + b + 'mm dashed) Tj ET\n';
-  const content = 'q ' + rasterFrame(boxes, S).matrix + ' cm /Im0 Do Q\n' + marks + dieline;
+  const content = 'q '+1/unit+' 0 0 '+1/unit+' 0 0 cm\nq ' + rasterFrame(boxes, S).matrix + ' cm /Im0 Do Q\n' + marks + dieline+'\nQ';
   const sep = (name, cmyk) => '[ /Separation /' + name + ' /DeviceCMYK << /FunctionType 2 /Domain [0 1] /C0 [0 0 0 0] /C1 [' + cmyk + '] /N 1 >> ]';
   const created = new Date().toISOString();
   const catalog = '<< /Type /Catalog /Pages 2 0 R /ViewerPreferences << /PrintScaling /None >>'
@@ -123,8 +124,8 @@ export async function exportPDF(s, mat, mode = 'cmyk') {
   const objs = [
     catalog,
     '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
-    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + Wpt.toFixed(6) + ' ' + Hpt.toFixed(6) + '] /TrimBox [' + trim + '] /BleedBox [0 0 ' + Wpt.toFixed(6) + ' ' + Hpt.toFixed(6) + ']'
-      + ' /CropBox [0 0 ' + Wpt.toFixed(6) + ' ' + Hpt.toFixed(6) + ']'
+    '<< /Type /Page /Parent 2 0 R /UserUnit '+unit+' /MediaBox [0 0 ' + layout.width.toFixed(6) + ' ' + layout.height.toFixed(6) + '] /TrimBox [' + trim.split(' ').map(v=>(+v/unit).toFixed(6)).join(' ') + '] /BleedBox [0 0 ' + layout.width.toFixed(6) + ' ' + layout.height.toFixed(6) + ']'
+      + ' /CropBox [0 0 ' + layout.width.toFixed(6) + ' ' + layout.height.toFixed(6) + ']'
       + ' /Resources << /XObject << /Im0 4 0 R >> /Font << /F1 5 0 R >> /ColorSpace << /CS1 ' + sep('CutContour', '0 1 1 0') + ' /CS2 ' + sep('Crease', '1 0 1 0') + ' >> /ExtGState << /OP1 << /OP true /op true /OPM 1 >> >> >> /Contents 6 0 R >>',
     imgObj,
     '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
@@ -142,5 +143,5 @@ export async function exportPDF(s, mat, mode = 'cmyk') {
     objs.push('<< /Type /Metadata /Subtype /XML /Length ' + pdfByteLength(xmp) + ' >>\nstream\n' + xmp + '\nendstream');
   }
   const suffix = professional ? '_professional' : mode === 'cmyk' ? '_cmyk' : '';
-  writePdf(objs, s.tpl + '_' + s.L + 'x' + s.W + 'x' + s.H + suffix + '_print.pdf', professional ? { infoRef: 7 } : {});
+  writePdf(objs, s.tpl + '_' + s.L + 'x' + s.W + 'x' + s.H + suffix + '_print.pdf', {userUnit:unit,...(professional?{infoRef:7}:{})});
 }

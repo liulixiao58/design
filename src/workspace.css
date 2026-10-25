@@ -32,6 +32,7 @@
 .suwa-workspace :is(input, select, textarea):focus { outline: 2px solid var(--ui-accent); outline-offset: 0; }
 .suwa-workspace button { transition: background-color 140ms ease, border-color 140ms ease; }
 .suwa-workspace button:disabled { opacity: .45; cursor: not-allowed; }
+.suwa-workspace .box-preview-toolbar button:hover:not([aria-pressed=true]) { background: var(--ui-subtle) !important; color: var(--ui-ink) !important; }
 .suwa-workspace :is(input, textarea) { caret-color: var(--ui-accent); }
 .suwa-workspace input[type=range] { accent-color: var(--ui-accent) !important; }
 .suwa-workspace :is(input[type=number], input[inputmode=decimal]) { font-variant-numeric: tabular-nums; }
@@ -78,8 +79,9 @@
 .action-menu > summary:focus-visible, .professional-section > summary:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 2px; }
 .action-menu-panel { position: fixed; z-index: 50; width: 300px; max-width: calc(100vw - 16px); overflow-y: auto; padding: 8px; border-radius: 8px; background: var(--ui-canvas); box-shadow: 0 8px 32px #20202026; color: var(--ui-ink); white-space: normal; }
 .workspace-check-menu .action-menu-panel { width: 420px; }
-.suwa-workspace .action-menu-panel > button { display: block; width: 100%; min-height: 36px; padding: 8px 10px; border: 0; background: transparent; color: var(--ui-ink); text-align: left; white-space: normal; font-size: 12px; border-radius: 4px; cursor: pointer; }
-.suwa-workspace .action-menu-panel > button:hover:not(:disabled) { background: var(--ui-subtle); }
+.suwa-workspace .action-menu-panel > button, .suwa-workspace .action-menu-panel > a { display: block; width: 100%; min-height: 36px; padding: 8px 10px; border: 0; background: transparent; color: var(--ui-ink); text-align: left; white-space: normal; font-size: 12px; border-radius: 4px; cursor: pointer; }
+.suwa-workspace .action-menu-panel > a { box-sizing: border-box; text-decoration: none; }
+.suwa-workspace .action-menu-panel > button:hover:not(:disabled), .suwa-workspace .action-menu-panel > a:hover { background: var(--ui-subtle); }
 .project-menu { max-width: 230px; }
 .project-menu > summary { border-color: transparent; padding-inline: 0; }
 .project-menu-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

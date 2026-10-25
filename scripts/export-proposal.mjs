@@ -49,7 +49,7 @@ export async function prepareProposal(manifest) {
     l.imgSrc = await embed(l.imgSrc.startsWith('/') ? '.' + l.imgSrc : l.imgSrc, l.imgSrc.startsWith('/') ? path.join(root, 'public') : base, 'image/');
   }
   validateProject(p.project);
-  const preflight=inspectProjectSources(p.project);p.project=preflight.project;p.productionIssues=preflight.issues;
+  const preflight=inspectProjectSources(p.project);p.project=preflight.project;p.productionIssues=preflight.issues.concat(preflight.releaseIssues);
   if(p.deliveryMode==='production'&&preflight.issues.length)throw new Error('生产交接预检失败：'+preflight.issues.join('；'));
   if(p.project.design.layers.some(l=>l.kind==='text'&&(l.font||'Noto Sans SC')==='Noto Sans SC')){
     p.fonts=p.fonts||[];

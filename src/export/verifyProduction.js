@@ -3,10 +3,13 @@ const multiply=(m,n)=>[m[0]*n[0]+m[2]*n[1],m[1]*n[0]+m[3]*n[1],m[0]*n[2]+m[2]*n[
 export async function verifyProductionPdf(bytes,boxes,hierarchy){
   const pdf=await PDFDocument.load(bytes),pages=pdf.getPages();
   if(pages.length!==1)throw new Error('导出复核失败：页数错误');
-  const p=pages[0],size=p.getSize(),trim=p.getTrimBox();
+  const p=pages[0],unit=p.node.get(PDFName.of('UserUnit'))?.asNumber()||1;
+  if(!Number.isFinite(unit)||unit<1||unit>75000)throw new Error('导出复核失败：页面单位无效');
+  const rawSize=p.getSize(),rawTrim=p.getTrimBox();
+  const size={width:rawSize.width*unit,height:rawSize.height*unit},trim=Object.fromEntries(Object.entries(rawTrim).map(([k,v])=>[k,v*unit]));
   const expectedTrim=[boxes.b*boxes.k,boxes.b*boxes.k,boxes.Wpt-2*boxes.b*boxes.k,boxes.Hpt-2*boxes.b*boxes.k];
   if(Math.abs(size.width-boxes.Wpt)>1e-3||Math.abs(size.height-boxes.Hpt)>1e-3||[trim.x,trim.y,trim.width,trim.height].some((v,i)=>Math.abs(v-expectedTrim[i])>1e-3))throw new Error('导出复核失败：页面/裁切尺寸不一致');
-  const bleed=p.getBleedBox();
+  const bleed=Object.fromEntries(Object.entries(p.getBleedBox()).map(([k,v])=>[k,v*unit]));
   if([bleed.x,bleed.y,bleed.width-boxes.Wpt,bleed.height-boxes.Hpt].some(v=>Math.abs(v)>1e-3))throw new Error('导出复核失败：出血框不一致');
   let contents=p.node.Contents();
   const streams=contents instanceof PDFRawStream?[contents]:contents.asArray().map(r=>pdf.context.lookup(r));
@@ -58,7 +61,7 @@ export async function verifyProductionPdf(bytes,boxes,hierarchy){
       const obj=xobjects?.lookup(PDFName.of(match[3]));
       if(obj?.dict.get(PDFName.of('Subtype'))?.toString()!=='/Image')continue;
       const w=obj.dict.get(PDFName.of('Width')).asNumber(),h=obj.dict.get(PDFName.of('Height')).asNumber();
-      const x=w/Math.hypot(matrix[0],matrix[1])*72,y=h/Math.hypot(matrix[2],matrix[3])*72;
+      const x=w/Math.hypot(matrix[0],matrix[1])*72/unit,y=h/Math.hypot(matrix[2],matrix[3])*72/unit;
       if(!(x>300&&y>300))throw new Error('导出复核失败：实际PDF中图片PPI不大于300');
       rasters.push({pixels:[w,h],ppi:[x,y],matrix});
     }

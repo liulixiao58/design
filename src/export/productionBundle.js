@@ -4,7 +4,8 @@ import { clipPtsOf } from '../design/containers.js';
 import { imageTypeOf, imageQualityOf } from '../design/imageQuality.js';
 import { productionGroups } from '../design/production.js';
 import { productionIssues } from '../design/productionCheck.js';
-import { pageBoxes } from './coordinates.js';
+import { productionReleaseIssues } from '../design/acceptance.js';
+import { pageBoxes, pdfPageLayout } from './coordinates.js';
 import { verifyProductionPdf } from './verifyProduction.js';
 import { assertProductionSvg, croppedSvgViewBox } from './svgPreflight.js';
 import { MASTER_FILES, productionPdfLayers } from './pdfLayers.js';
@@ -37,14 +38,15 @@ function bitmap(doc,l,plate,index){
 
 async function renderPDF(group,s,g,boxes,PDFDocument,SVGtoPDF,fontBytes){
   const plate=group.id!=='print',layers=group.layers.filter(l=>l.visible);
-  const doc=new PDFDocument({pdfVersion:'1.7',size:[boxes.Wpt,boxes.Hpt],margin:0,compress:true,info:{Title:MASTER_FILES[group.id],Subject:'1:1 mm; optional content plate and asset layers; source raster >300ppi; no ICC/PDF-X claim'}});
+  const layout=pdfPageLayout(boxes),unit=layout.userUnit;
+  const doc=new PDFDocument({pdfVersion:'1.7',userUnit:unit,size:[layout.width,layout.height],margin:0,compress:true,info:{Title:MASTER_FILES[group.id],Subject:'1:1 mm; optional content plate and asset layers; source raster >300ppi; no ICC/PDF-X claim'}});
   const chunks=[];const done=new Promise((resolve,reject)=>{doc.on('data',b=>chunks.push(b));doc.on('error',reject);doc.on('end',()=>{const out=new Uint8Array(chunks.reduce((n,b)=>n+b.length,0));let p=0;for(const b of chunks){out.set(b,p);p+=b.length;}resolve(out);});});
   doc._root.data.ViewerPreferences=doc.ref({PrintScaling:'None'});
-  doc.page.dictionary.data.TrimBox=[boxes.b*boxes.k,boxes.b*boxes.k,boxes.Wpt-boxes.b*boxes.k,boxes.Hpt-boxes.b*boxes.k];
-  doc.page.dictionary.data.BleedBox=[0,0,boxes.Wpt,boxes.Hpt];
+  doc.page.dictionary.data.TrimBox=[boxes.b*boxes.k,boxes.b*boxes.k,boxes.Wpt-boxes.b*boxes.k,boxes.Hpt-boxes.b*boxes.k].map(v=>v/unit);
+  doc.page.dictionary.data.BleedBox=[0,0,layout.width,layout.height];
   const hierarchy=productionPdfLayers(doc,group);
   for(const [file,bytes]of fontBytes)doc.registerFont(file,bytes);
-  doc.save().scale(boxes.k).translate(-boxes.ox,-boxes.oy);
+  doc.save().scale(layout.scale).translate(-boxes.ox,-boxes.oy);
   for(const [index,l]of layers.entries()){
     const binding=hierarchy.bindings.get(l.id);
     doc.addContent(`/OC /${binding.plate} BDC\n/OC /${binding.asset} BDC`);
@@ -74,12 +76,16 @@ async function renderPDF(group,s,g,boxes,PDFDocument,SVGtoPDF,fontBytes){
   doc.restore();doc.end();return {bytes:await done,plates:hierarchy.plates};
 }
 
-export async function buildProductionBundle(s,mat){
+export async function buildProductionBundle(s,mat,{proof=false}={}){
   validateProject(makeProject(s));
-  const issues=productionIssues(s.layers,{loaded:true,reconstruction:s.reconstruction});if(issues.length)throw new Error('生产导出被阻止：\n'+issues.join('\n'));
+  const releaseIssues=productionReleaseIssues(s);
+  const issues=productionIssues(s.layers,{loaded:true,reconstruction:s.reconstruction}).concat(proof?[]:releaseIssues);if(issues.length)throw new Error('生产导出被阻止：\n'+issues.join('\n'));
   const [pdfkit,{default:SVGtoPDF},fontBytes,{default:Helvetica}]=await Promise.all([import('pdfkit'),import('svg-to-pdfkit'),fontData(s.layers),import('pdfkit/standard-fonts/Helvetica')]);
   pdfkit.registerStdFonts(Helvetica);const PDFDocument=pdfkit.default;
   const g=geomOf(s,mat.t),boxes=pageBoxes(s,g),files={},report={version:2,format:'three-layered-pdf-masters',units:'mm',box:{tpl:s.tpl,L:s.L,W:s.W,H:s.H,dimension:'inner'},page:{origin:[boxes.ox,boxes.oy],size:[boxes.Wmm,boxes.Hmm],bleed:s.bleed},marksVisible:false,checks:[],limitations:['工艺母版包含多种版；制版前仅启用所需版，不能将全部工艺叠加直接制版','PDF原生图层不保证所有编辑软件完整恢复字体和分组，需工厂试开','CMYK为数值转换，无ICC/PDF-X认证；需印厂RIP与实物打样'],layers:s.layers.filter(l=>l.visible).map(l=>({id:l.id,panelId:l.panelId,x:l.x,y:l.y,w:l.w,h:l.h,rot:l.rot||0,finish:l.finish,factoryId:l.factoryId,plateId:l.plateId,registration:l.registration,quality:l.kind==='image'?imageQualityOf(l):{type:'vector-text-or-shape'}}))};
+  report.deliveryStatus=proof?'factory-proof-not-for-production':'recorded-release-requires-factory-control';
+  report.acceptance={records:s.workflow?.acceptance||{},pending:releaseIssues};
+  report.closure={rule:'workbench-closure-v1',glueBase:s.glue,...g.closure,confirmation:'需白样确认'};
   for(const group of productionGroups(s.layers,s.embDir)){
     const layers=group.layers.filter(l=>l.visible),file=MASTER_FILES[group.id];
     const {bytes,plates}=await renderPDF(group,s,g,boxes,PDFDocument,SVGtoPDF,fontBytes);
@@ -88,12 +94,13 @@ export async function buildProductionBundle(s,mat){
     files[file]=bytes;report.checks.push({file,factoryId:group.id,name:group.name,empty:!layers.length,plates,layerIds:layers.map(l=>l.id),...check,sha256:[...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(v=>v.toString(16).padStart(2,'0')).join('')});
   }
   files['交付说明.txt']=strToU8('三份PDF母版使用相同1:1页面、原点与套准基准。\n请在支持PDF图层的软件中打开：工艺版为父图层，单独素材为子图层；矢量与文字未整页栅格化，图片保留独立图像对象。\n工艺母版默认显示全部版，仅供整体核对。制版前必须只启用所需工艺版，不能把全部工艺混在一起制版。\n空白母版表示该工厂没有可见素材，详见manifest.json。照片内部不是矢量路径；不同软件的字体、分组与图层恢复须由工厂试开确认。\n角线不进入图稿，刀版参考另附。CMYK无ICC/PDF-X认证，正式生产前仍需RIP与实物打样。');
+  if(proof)files['交付说明.txt']=strToU8('【工厂核样包：禁止量产】仅用于文件试开、RIP及实物打样；未完成生产验收。\n待核验：'+releaseIssues.join('；')+'\n\n'+new TextDecoder().decode(files['交付说明.txt']));
   files['reference/dieline.svg']=strToU8(`<svg xmlns="http://www.w3.org/2000/svg" width="${boxes.Wmm}mm" height="${boxes.Hmm}mm" viewBox="${boxes.ox} ${boxes.oy} ${boxes.Wmm} ${boxes.Hmm}"><path d="${g.cutPath}" fill="none" stroke="red" stroke-width="0.15"/><path d="${g.creasePath}" fill="none" stroke="green" stroke-width="0.15"/></svg>`);
   files['manifest.json']=strToU8(JSON.stringify(report,null,2));
   return {files,report,zip:zipSync(files,{level:6})};
 }
-export async function exportProductionBundle(s,mat){
-  const bundle=await buildProductionBundle(s,mat),url=URL.createObjectURL(new Blob([bundle.zip],{type:'application/zip'}));
-  const a=document.createElement('a');a.href=url;a.download=`${s.tpl}_${s.L}x${s.W}x${s.H}_production.zip`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+export async function exportProductionBundle(s,mat,options){
+  const bundle=await buildProductionBundle(s,mat,options),url=URL.createObjectURL(new Blob([bundle.zip],{type:'application/zip'}));
+  const a=document.createElement('a');a.href=url;a.download=`${s.tpl}_${s.L}x${s.W}x${s.H}_${options?.proof?'工厂核样-禁止量产':'production'}.zip`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
   return bundle.report;
 }

@@ -41,7 +41,6 @@ export function App() {
   const sw = g.sbb[2] - g.sbb[0], sh = g.sbb[3] - g.sbb[1];
   const tplName = (TPLS.find(x => x.id === s.tpl) || TPLS[0]).name;
   const checks = workspaceChecks(s, m);
-  const warnN = checks.design.length + checks.production.length;
   const tabs = [['projects', '项目'], ['workflow', '流程'], ['structure', '结构'], ['design', '设计'], ['three', '3D'], ['output', '交付']];
   const viewName = tabs.find(tb => tb[0] === s.view)?.[1] || '项目';
   const exportProject = () => {
@@ -58,7 +57,7 @@ export function App() {
     setDelivery({ busy: true, error: '', receipt: '' });
     try {
       const result = await task.current.run(mode, store.get(), store.mat());
-      setDelivery({ busy: false, error: '', receipt: `已导出「${name}」${mode === 'rgb' ? '评审 PDF（仅预览）' : `生产文件包，复核 ${result.checks.length} 份分层 PDF 母版`}` });
+      setDelivery({ busy: false, error: '', receipt: `已导出「${name}」${mode === 'rgb' ? '评审 PDF（仅预览）' : `${mode === 'proof' ? '工厂核样包（禁止量产）' : '生产文件包'}，复核 ${result.checks.length} 份分层 PDF 母版`}` });
     } catch (e) { setDelivery({ busy: false, error: e.message || String(e), receipt: '' }); }
   };
 
@@ -101,14 +100,16 @@ export function App() {
           <span aria-hidden="true">/</span><strong>{viewName}</strong>
         </div>
         <div className="workspace-actions">
-          <ActionMenu label={`检查 · ${warnN}`} className="workspace-check-menu">
+          <ActionMenu label={<span>检查 · <span style={{ color: 'var(--ui-error)' }}>● 红 {checks.production.length}</span> / <span style={{ color: 'var(--ui-warning)' }}>● 黄 {checks.pending.length + checks.design.length}</span></span>} className="workspace-check-menu">
             <CheckDetails checks={checks} />
             <button onClick={() => store.set({ view: 'output' })}>查看交付检查</button>
           </ActionMenu>
           <button disabled={actionsBusy} onClick={library.save} className="workspace-save">{library.busy ? '处理中…' : '保存'}</button>
           <ActionMenu label={delivery.busy ? '生成中…' : '交付 ▾'} className="delivery-menu">
             <button disabled={actionsBusy} onClick={() => runExport('rgb')}>评审 PDF（仅预览）</button>
-            <button disabled={actionsBusy || checks.production.length > 0} onClick={() => runExport('cmyk')}>生产文件包（三份分层母版）</button>
+            <button disabled={actionsBusy || checks.production.length > 0} onClick={() => runExport('proof')}>工厂核样包（技术合格后可用，禁止量产）</button>
+            <button disabled={actionsBusy || checks.production.length > 0 || checks.pending.length > 0} onClick={() => runExport('cmyk')}>生产文件包（三份分层母版）</button>
+            {checks.pending.length > 0 && <p className="menu-blocker">有 {checks.pending.length} 项未核验，禁止生产放行；工程备份可下载。</p>}
             {checks.production.length > 0 && <p className="menu-blocker">有 {checks.production.length} 项生产阻断，请查看检查。</p>}
             <button onClick={() => store.set({ view: 'output' })}>交付详情与文件说明</button>
           </ActionMenu>

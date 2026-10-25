@@ -20,7 +20,9 @@ const CONTRACTS = {
 const CASES = [
   { name: '默认竖盒', L: 80, W: 40, H: 120, t: 0.45, glue: 14 },
   { name: '低矮宽盒', L: 120, W: 75, H: 36, t: 0.5, glue: 18 },
-  { name: '厚纸小盒', L: 55, W: 32, H: 68, t: 1.5, glue: 10 }
+  { name: '厚纸小盒', L: 55, W: 32, H: 68, t: 1.5, glue: 10 },
+  { name: '1000毫米上限', L: 1000, W: 1000, H: 1000, t: 0.5, glue: 14 },
+  { name: '大长宽低高度', L: 1000, W: 800, H: 30, t: 1.5, glue: 14 }
 ];
 
 const ACCESSORY = new Set(['dust', 'tuck', 'ear']);
@@ -89,7 +91,10 @@ for (const c of CASES) {
 
     if (tpl === 'rte' || tpl === 'ste') {
       const glueNode = nodes.find(n => n.shape === 'glue');
-      assert.equal(glueNode.out, c.glue, `${tpl}/${c.name} 的 3D 糊口宽度未跟随结构参数`);
+      assert.equal(glueNode.out, geom.closure.glue, `${tpl}/${c.name} 的 3D 糊口宽度未跟随实际结构参数`);
+      for(const node of nodes.filter(n=>n.shape==='dust'||n.shape==='tuck')){
+        assert.equal(node.out,node.shape==='dust'?geom.closure.dust:geom.closure.tuck,`${tpl}/${c.name} 的闭合附件尺寸漂移`);
+      }
     }
   }
 }

@@ -18,3 +18,14 @@ export function rasterFrame(boxes, S) {
     .map(v => v.toFixed(6)).join(' ');
   return { W, H, matrix };
 }
+
+// 超过200英寸时使用PDF 1.7页面单位，图案和页面同时换算，物理尺寸仍为1:1。
+export function pdfPageLayout(boxes) {
+  const userUnit=Math.max(1,Math.ceil(Math.max(boxes.Wpt,boxes.Hpt)/14400));
+  return {userUnit,width:boxes.Wpt/userUnit,height:boxes.Hpt/userUnit,scale:boxes.k/userUnit};
+}
+
+// 评审图允许降采样；生产PDF使用原始矢量/位图，不走此预览预算。
+export function reviewRasterScale(boxes) {
+  return Math.min(8,4096/Math.max(boxes.Wmm,boxes.Hmm),Math.sqrt(12_000_000/(boxes.Wmm*boxes.Hmm)));
+}

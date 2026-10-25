@@ -3,6 +3,7 @@ import React from 'react';
 import { store, useStore } from '../state/store.js';
 import { TPLS, MATS } from '../dieline/templates.js';
 import { geomOf } from '../dieline/geom.js';
+import { closureOf } from '../dieline/closure.js';
 import { reflowLayersToContainers } from '../design/containers.js';
 import { SheetCanvas } from './SheetCanvas.jsx';
 import { CheckDetails } from './CheckDetails.jsx';
@@ -24,11 +25,11 @@ export function StructureView() {
   const fmt = v => Math.round(v * 10) / 10;
   const t = m.t;
   const sw = g.sbb[2] - g.sbb[0], sh = g.sbb[3] - g.sbb[1];
-  const tkNow = Math.min(16, s.W * 0.55);
+  const closure = closureOf(s,t), tkNow = closure.tuck;
   const specTpl = {
     rte: [{ k: '板宽序列', v: fmt(s.W + t) + '·' + fmt(s.L + t) + '·' + fmt(s.W + t) + '·' + fmt(s.L + 2 * t) }, { k: '盖深 / 插舌', v: fmt(s.W + t) + ' / ' + fmt(tkNow) }],
     ste: [{ k: '板宽序列', v: fmt(s.W + t) + '·' + fmt(s.L + t) + '·' + fmt(s.W + t) + '·' + fmt(s.L + 2 * t) }, { k: '盖深 / 插舌', v: fmt(s.W + t) + ' / ' + fmt(tkNow) }],
-    mailer: [{ k: '侧墙宽', v: fmt(s.H + t) }, { k: '插舌深', v: fmt(Math.min(s.H * 0.7, 28)) }],
+    mailer: [{ k: '侧墙宽', v: fmt(s.H + t) }, { k: '插舌深', v: fmt(tkNow) }],
     lidbase: [{ k: '盖内放量', v: '+1.0 mm/边' }, { k: '盖高', v: fmt(Math.max(14, s.H * 0.45)) }],
     drawer: [{ k: '套筒放量', v: '+2~4 × t' }, { k: '筒深', v: fmt(s.L + 2) }],
     cyl: [{ k: '直径 D', v: fmt(s.L) + ' mm' }, { k: '分段', v: '24 × ' + fmt(Math.PI * s.L / 24) + ' mm' }],
@@ -63,9 +64,9 @@ export function StructureView() {
       <Block>
         <ST>内尺寸 · mm</ST>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 7 }}>
-          <NumField label="长 L" value={s.L} onChange={setNum('L', 20, 600)} />
-          <NumField label="宽 W" value={s.W} onChange={setNum('W', 15, 600)} />
-          <NumField label="高 H" value={s.H} onChange={setNum('H', 15, 600)} />
+          <NumField label="长 L" value={s.L} onChange={setNum('L', 20, 1000)} />
+          <NumField label="宽 W" value={s.W} onChange={setNum('W', 15, 1000)} />
+          <NumField label="高 H" value={s.H} onChange={setNum('H', 15, 1000)} />
         </div>
       </Block>
       <Block>
@@ -80,7 +81,12 @@ export function StructureView() {
         <ST>工艺参数</ST>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7 }}>
           <NumField label="出血 mm" value={s.bleed} onChange={setNum('bleed', 0, 10)} />
-          <NumField label="糊口 mm" value={s.glue} onChange={setNum('glue', 8, 30)} />
+          <NumField label="糊口基准 mm" value={s.glue} onChange={setNum('glue', 5, 100)} />
+        </div>
+        <div style={{fontSize:11,color:'var(--ui-muted)',marginTop:8,lineHeight:1.6}}>
+          {closure.tuck>0&&<>插舌 {fmt(closure.tuck)} mm · {s.tpl==='mailer'?'侧翼':'防尘翼'} {fmt(closure.dust)} mm<br /></>}
+          {closure.glue>0&&<>实际糊口 {fmt(closure.glue)} mm（结合纸厚及粘接面计算）<br /></>}
+          附件按各自空间计算；默认结构须白样确认。
         </div>
       </Block>
       <Block>

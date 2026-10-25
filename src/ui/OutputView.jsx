@@ -10,10 +10,11 @@ import { CheckDetails } from './CheckDetails.jsx';
 import { pageBoxes } from '../export/coordinates.js';
 import { productionGroups, PENDING_FINISHES } from '../design/production.js';
 import { ST, KV, btnSt } from './widgets.jsx';
+import { AcceptancePanel } from './AcceptancePanel.jsx';
 
 export function OutputView({ checks, exporting, onExport }) {
   const s = useStore();
-  const productionErrors = checks.production;
+  const productionErrors = checks.production.concat(checks.release || []);
   const m = store.mat();
   const g = geomOf(s, m.t);
   const fmt = v => Math.round(v * 10) / 10;
@@ -57,13 +58,16 @@ export function OutputView({ checks, exporting, onExport }) {
           <h1 className="delivery-title">交付文件</h1>
           <p className="delivery-intro">{tplName} · {s.reconstruction ? '模板占位参数（非成品尺寸）' : '内尺寸'} {s.L} × {s.W} × {s.H} mm · {s.layers.length} 个图层</p>
           <button disabled={exporting} onClick={() => onExport('rgb')} style={{ ...btnSt, width: '100%' }}>评审 PDF（仅预览，不能制版）</button>
+          <button disabled={exporting || checks.production.length > 0} onClick={() => onExport('proof')} style={{ ...btnSt, marginTop: 10, width: '100%' }}>工厂核样包（禁止量产）</button>
+          <p className="delivery-intro">核样包只允许技术检查通过后用于试开和打样；生产包另外要求本版四项核验记录。工程备份始终可以下载。</p>
           <button disabled={exporting || productionErrors.length > 0} onClick={() => onExport('cmyk')} style={{ ...btnSt, marginTop: 10, width: '100%' }}>
             {exporting ? '正在生成，请稍候…' : '生产文件包（三份分层 PDF 母版）'}
           </button>
-          {productionErrors.length > 0 && <p className="menu-blocker">有 {productionErrors.length} 项生产阻断，详情见右侧检查。</p>}
+          {productionErrors.length > 0 && <p className="menu-blocker">{checks.production.length} 项技术红灯、{checks.release?.length || 0} 项待核验；禁止生产放行，详情见右侧检查。</p>}
           <p className="delivery-intro">交付前仍须完成印厂 / RIP 人工预检。生成状态和错误在工作台顶部显示。</p>
         </div>
         <div style={card}><ST>交付检查</ST><CheckDetails checks={checks} /></div>
+        <div style={{ ...card, gridColumn: '1 / -1' }}><AcceptancePanel /></div>
         <details className="professional-section" style={card}><summary>项目与文件尺寸详情</summary>{outSummary.map(r => (
           <div key={r.k} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '5px 0', fontSize: 12.5, borderBottom: "1px dashed var(--ui-border-soft)" }}>
             <span style={{ color: "var(--ui-secondary)", whiteSpace: 'nowrap' }}>{r.k}</span>

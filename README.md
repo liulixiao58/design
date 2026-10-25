@@ -2,7 +2,7 @@
 
 # 设计 · OpenBox3D
 
-**Browser-based packaging design workbench — parametric dielines, layered artwork design with print finishes, PBR 3D folding preview, and press-ready PDF export.**
+**Browser-based packaging design workbench — parametric dielines, layered artwork design with print finishes, PBR 3D folding preview, and layered PDF export for factory proofing.**
 
 中文速览见下文 [中文说明](#中文说明)。
 
@@ -16,11 +16,13 @@
 
 ## Features
 
+2026-10-25更新：尺寸上限1000mm及闭合附件规则、同源工艺套准、源素材预算、核样/正式生产分级导出。详见[更新记录](CHANGELOG.md)。本仓库不包含客户工程和私人素材。
+
 - **Parametric dielines** — 7 box templates (tuck-end, mailer, tray/lid, drawer, sleeve, tube…), all dimensions in millimetres with paper-thickness compensation, bleed and safe-area guides, plus manual node/edge editing stored as replayable overrides.
 - **Layered design canvas** — text, image and shape layers bound to panels, with alignment, rotation, opacity, 300-dpi warnings, and per-layer **print finish channels**: foil (gold/silver), spot UV, gloss, holographic/iridescent, emboss/deboss.
 - **Real-time PBR 3D preview** — three.js `MeshPhysicalMaterial` with baked albedo / normal / roughness / metalness / clearcoat / displacement channels. Watch the flat sheet fold into the finished box; paper grain, lamination film, foil and embossing stack naturally in one material.
 - **Studio & materials** — 8 built-in studio scenes (HDRI + light rigs), 7 CC0 PBR ground stages, and paper/film presets with grain, roughness, gloss and emboss controls.
-- **Press-ready PDF export** — 1:1 CMYK 300 dpi production PDFs with TrimBox/BleedBox, CutContour/Crease spot-colour overprint, plus DeviceGray finish separations (foil / UV / gloss / emboss).
+- **Layered PDF export** — 1:1 CMYK print masters and process masters with independent plate/asset layers, TrimBox/BleedBox, native vectors and source rasters above 300 PPI. Dielines are supplied as a separate SVG reference. Factory proofing and final production release use separate checks; no ICC/PDF-X certification is claimed.
 - **`.boxproj` project files** — save and share your work as a single local JSON file (pure client-side, no server, no account).
 - **Zero backend** — everything runs in your browser. No API keys, no cloud, no telemetry.
 
@@ -28,7 +30,7 @@
 
 ## Quick Start
 
-Requirements: **Node.js ≥ 18** and npm. The whole app is static and runs entirely in your browser.
+Requirements: **Node.js ≥ 22** and npm. The whole app is static and runs entirely in your browser.
 
 ```bash
 git clone https://github.com/liulixiao58/design.git
@@ -37,7 +39,9 @@ npm install
 npm run dev
 ```
 
-Open <http://127.0.0.1:26847> — a ready-made sample box greets you in the 3D view, already folded. Start designing right away; no configuration is needed.
+Open <http://127.0.0.1:26847>. The public edition starts with the project workspace and a blank sample box. Create a project or import your own `.boxproj`; customer projects and browser-local project records are not bundled.
+
+WorkBuddy、豆包工作等本地代理可读取本仓库并执行上述命令；Skill位于 `.agents/skills/alterlab-vcd-packaging/`，具体识别方式取决于代理。首次接续先读[AGENTS.md](AGENTS.md)。本仓库不包含已验证的专用MCP连接器，也不保证所有代理自动加载Skill。
 
 Production build:
 
@@ -124,7 +128,7 @@ Handy during development: `?view=structure|design|three|output`, `?tpl=rte|ste|m
 
 **OpenBox3D（苏哇工作台）** 是一个纯浏览器的包装盒设计工作台：参数化刀版（纸厚补偿、出血/安全区）→ 分层平面设计（烫金/烫银/局部 UV/亮面/压纹/镭射幻彩工艺通道）→ three.js PBR 3D 折叠预览 → 1:1 CMYK 印刷 PDF 与工艺分版导出。无需后端、无需账号、无需 API Key。
 
-- **安装运行**：Node.js ≥ 18，`npm install && npm run dev`，打开 <http://127.0.0.1:26847>，首屏即内置通用示例盒，直接开始 DIY。
+- **安装运行**：Node.js ≥ 22，先执行 `npm install`，再执行 `npm run dev`，打开 <http://127.0.0.1:26847>；公开版使用空白示例和本地项目库。
 - **工程文件**：顶栏「导出工程 / 导入工程」保存与分享 `.boxproj` 本地文件；「重置示例盒」恢复初始状态。
 - **替换示例盒**：在工作台设计好盒子 → 顶栏「导出工程」→ `npm run preset:from -- /路径/工程.boxproj`（工程写入 `src/preset/preset-box.json`；客户素材不应提交到公共仓库）。
 - **开源边界**：本开源版不含 AI 生图、AR/iOS 预览、DXF 导出与实验性的材质和环境实验室。

@@ -16,3 +16,10 @@ docs/
 output/
 tmp/
 design-references/
+deliverables/
+sites/
+.env
+.env.*
+!.env.example
+*.boxproj
+*.zip

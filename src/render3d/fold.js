@@ -3,6 +3,7 @@
 // buildNode 累计 rotZ（0/90/180/270），按规则自动求 flip——主体板零手工方向标定
 import * as THREE from 'three';
 import { discBbox } from '../dieline/templates.js';
+import { closureOf, closureOutline } from '../dieline/closure.js';
 
 const deg = d => d * Math.PI / 180;
 export const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
@@ -69,7 +70,7 @@ function boxUV(geo, lx, ly, t, rotZ, flip, uvRect, sbb, innerUV) {
   geo.groups.forEach((g, gi) => { g.materialIndex = gi >= 4 ? 0 : 1; });
 }
 
-function shapeOf(T, kind, len, out, n) {
+function shapeOf(T, kind, len, out, n, t) {
   const S = new T.Shape();
   const q = (cx, cy, x, y) => S.quadraticCurveTo(cx, cy, x, y);
   if (kind === 'disc') {
@@ -80,16 +81,9 @@ function shapeOf(T, kind, len, out, n) {
     S.moveTo(0, 0); S.lineTo(len, 0);
     for (let k = 2; k < N; k++) S.lineTo(cx + Rp * Math.cos(base + k * e), cy + Rp * Math.sin(base + k * e));
     S.closePath();
-  } else if (kind === 'dust') {
-    const i = Math.min(6, len * 0.12), d5 = Math.min(5, out * 0.3);
-    S.moveTo(i * 0.25, 0); S.lineTo(i * 0.6, out - d5); S.lineTo(i * 1.5, out);
-    S.lineTo(len - i * 1.5, out); S.lineTo(len - i * 0.6, d5); S.lineTo(len - i * 0.25, 0);
-  } else if (kind === 'tuck') {
-    const sh = Math.min(5, len * 0.12), rr = Math.min(3.5, out * 0.4);
-    S.moveTo(1, 0); S.lineTo(sh, 2); S.lineTo(sh, out - rr); q(sh, out, sh + rr, out);
-    S.lineTo(len - sh - rr, out); q(len - sh, out, len - sh, out - rr); S.lineTo(len - sh, 2); S.lineTo(len - 1, 0);
-  } else if (kind === 'glue') {
-    S.moveTo(0, 0); S.lineTo(len, 0); S.lineTo(len - 5, out); S.lineTo(5, out);
+  } else if (['dust','tuck','glue'].includes(kind)) {
+    const pts=closureOutline(kind,len,out,t);
+    S.moveTo(...pts[0]);for(const p of pts.slice(1))S.lineTo(...p);
   } else if (kind === 'ear') {
     const rr = Math.min(6, out * 0.4);
     S.moveTo(0.5, 0); S.lineTo(len - 0.5, 0); S.lineTo(len - 0.5, out - rr);
@@ -124,7 +118,7 @@ export class Folder {
       geo.translate(len / 2, out / 2, t / 2);
       boxUV(geo, len, out, t, rotZ, flip, uvRect, this.sbb, this.innerUV);
     } else {
-      geo = new T.ExtrudeGeometry(shapeOf(T, kind, len, out, this._shapeN), { depth: t, bevelEnabled: false, curveSegments: 6 });
+      geo = new T.ExtrudeGeometry(shapeOf(T, kind, len, out, this._shapeN, t), { depth: t, bevelEnabled: false, curveSegments: 6 });
       retopUV(geo, len, out, rotZ, flip, uvRect, this.sbb, this.innerUV, t);
     }
     const m = new T.Mesh(geo, [this.faceMat, this.coreMat]);
@@ -236,7 +230,8 @@ export class Folder {
 
 // —— 盒型折叠树（与 2D gen* 共用尺寸公式；uv = 2D 刀版坐标矩形，attach = 2D 中挂于母板哪侧） ——
 export function makePieces(tpl, L, W, H, t, glue) {
-  const dh = Math.min(W * 0.75, 32), tk = Math.min(16, W * 0.55);
+  const closure=closureOf({tpl,L,W,H,glue},t),{dust:dh,tuck:tk}=closure;
+  glue=closure.glue;
   if (tpl === 'rte' || tpl === 'ste') {
     const bh = H + t, lidH = W + t;
     const xs1 = W + t, xs2 = W + t + L + t, xs3 = xs2 + W + t;
@@ -272,7 +267,7 @@ export function makePieces(tpl, L, W, H, t, glue) {
     return [{ tree: { lx: L, ly: H, uv: [xs1, 0, L + t, bh], panelId: 'front', role: 'hero', surface: 'outside', up: 'top', kids }, sign: -1, lift: W, off: [0, 0], stand: true }];
   }
   if (tpl === 'mailer') {
-    const tk2 = Math.min(H * 0.7, 28), dw = Math.min(H * 0.8, 26);
+    const tk2 = tk, dw = dh;
     const Lc = L + 2 * t, Wl = W + 3 * t, Hb = H + t, Wb = W + t, Hf = H, Sw = H + t;
     const y1 = Wl, y2 = y1 + Hb, y3 = y2 + Wb;
     const eh = Math.min(Hf - 1, Sw * 0.95);
@@ -357,7 +352,7 @@ export function makePieces(tpl, L, W, H, t, glue) {
       edge: 'far', out: H + 2 * t, uv: [oxS, 0, H + 2 * t, band], attach: 'l', kids: [{
         edge: 'far', out: W + 3 * t, uv: [sxs3, 0, W + 4 * t, band], attach: 'l', kids: [{
           edge: 'far', out: H + 3 * t, uv: [sxs2, 0, H + 3 * t, band], attach: 'l', kids: [
-            { edge: 'far', out: 12, shape: 'glue', uv: [oxS - 12, 0, 12, band], attach: 'l' }]
+            { edge: 'far', out: glue, shape: 'glue', uv: [oxS - glue, 0, glue, band], attach: 'l' }]
         }]
       }]
     }]

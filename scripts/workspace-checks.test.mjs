@@ -16,7 +16,7 @@ test('没有设计警示也必须显示未接入字体的生产阻断', () => {
 test('出血按实际数值检查，未执行的结构检测保持待人工确认', () => {
   const checks = workspaceChecks({ ...box, bleed: 1 }, material);
   assert.ok(checks.design.some(s => s.includes('出血')));
-  assert.ok(checks.pending.some(s => s.includes('外轮廓')));
+  assert.ok(checks.pending.some(s => s.includes('结构白样')));
   const normal = workspaceChecks(box, material);
   assert.equal(normal.design.length, 0);
   assert.equal(normal.production.length, 0);

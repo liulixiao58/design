@@ -240,6 +240,7 @@ export function normalizeRig(input) {
   const env = src.environment || {}, sh = src.shadow || {}, tn = src.tone || {}, cam = src.camera || {};
   return {
     id: typeof src.id === 'string' ? src.id : '', name: typeof src.name === 'string' ? src.name : '自定义场景',
+    displayPose: src.displayPose === 'upright' ? 'upright' : 'flat',
     environment: {
       source: typeof env.source === 'string' && env.source ? env.source : DEFAULT_RIG.environment.source,
       intensity: clamp(num(env.intensity, DEFAULT_RIG.environment.intensity), 0, 2),
@@ -267,6 +268,7 @@ export function scenePreset(id) {
 export function rigToStorePatch(rig) {
   const r = normalizeRig(rig), env = r.environment;
   const patch = {
+    displayPose3d: r.displayPose,
     environment3d: env.source, envIntensity3d: env.intensity, envRotation3d: env.rotation,
     showEnvironmentBackground: env.background === 'hdri', backgroundMode3d: env.background === 'hdri' ? 'gradient' : env.background,
     backgroundColor3d: env.backgroundColor, backgroundBlur3d: env.backgroundBlur,
@@ -285,8 +287,9 @@ export function storeToRig(state) {
   try { dome = JSON.parse(state.domeSpec3d); } catch (_) { dome = null; }
   let lights = null;
   try { const parsed = JSON.parse(state.lightsSpec3d); if (Array.isArray(parsed)) lights = parsed; } catch (_) { lights = null; }
-  return normalizeRig({
+  const rig = normalizeRig({
     name: '当前场景',
+    displayPose: state.displayPose3d,
     environment: {
       source: state.environment3d, intensity: state.envIntensity3d, rotation: state.envRotation3d,
       background: state.showEnvironmentBackground ? 'hdri' : (state.backgroundMode3d === 'color' ? 'color' : 'gradient'),
@@ -297,6 +300,9 @@ export function storeToRig(state) {
     tone: { mapping: state.toneMapping3d, exposure: state.expo3d },
     camera: { projection: state.cameraProjection3d, fov: state.fov3d }, stage: state.stage3d
   });
+  // 平放沿用旧工程格式，不因新增可选姿态改变历史内容指纹。
+  if(rig.displayPose==='flat')delete rig.displayPose;
+  return rig;
 }
 
 export function exportSceneJson(rig) {

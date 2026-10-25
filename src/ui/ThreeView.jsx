@@ -82,6 +82,7 @@ export function ThreeView() {
         </select>
         <p className="delivery-intro">3D 为工艺近似模拟，不能代替纸张 / 箔材实测。</p>
         <details className="professional-section professional-inline"><summary>细节校样说明</summary><Note>单盒面使用独立高密度贴图（最长3072像素），便于放大检查；原图低清仍不能补回细节。</Note></details>
+        <label style={{display:'block',marginBottom:12}}>整盒摆放姿态<select aria-label="整盒摆放姿态" value={s.displayPose3d||'flat'} onChange={e=>store.set({displayPose3d:e.target.value})} style={selectSt}><option value="flat">平放</option><option value="upright">立放（大面朝前）</option></select></label>
         <ST>纸张 / 覆膜</ST>
         <div style={{ fontSize: 10.5, color: "var(--ui-muted)", marginBottom: 3 }}>纸张</div>
         <select aria-label="纸张" value={s.paper3d} onChange={e => { const p = paperPreset(e.target.value); store.set({ paper3d: p.id, surfaceRoughness: p.roughness, grainStrength: p.grainStrength, grainScale: p.grainMm }); }} style={{ ...selectSt, marginBottom: 8 }}>
